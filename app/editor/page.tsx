@@ -1,6 +1,8 @@
 'use client';
 
-import CodeEditor from '@/app/components/code-editor';
+import dynamic from 'next/dynamic';
+
+const CodeEditor = dynamic(() => import('@/app/components/code-editor'), { ssr: false });
 
 export default function Page() {
   return (
