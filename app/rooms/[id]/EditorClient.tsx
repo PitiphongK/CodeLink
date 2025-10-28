@@ -56,6 +56,16 @@ export default function EditorClient({ roomId }: Props) {
     };
   }, [roomId]);
 
+  const handleInvite = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Invite link copied to clipboard!');
+    }, (err) => {
+      console.error('Could not copy text: ', err);
+      alert('Failed to copy invite link.');
+    });
+  };
+
   const handleExport = () => {
     if (editorRef.current) {
       const content = editorRef.current.getValue();
@@ -141,6 +151,7 @@ function add(a, b) { return a + b }
           />
           <Button onPress={handleImportClick}>Import</Button>
           <Button onPress={handleExport}>Export</Button>
+          <Button onPress={handleInvite}>Invite</Button>
         </div>
       </div>
       <Editor
