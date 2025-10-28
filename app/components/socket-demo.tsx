@@ -7,7 +7,7 @@ export default function SocketDemo() {
   const [status, setStatus] = useState('disconnected');
 
   useEffect(() => {
-    const s = io('http://localhost:4000', { withCredentials: true });
+    const s = io('https://codelink-hsdm.onrender.com', { withCredentials: true });
     socketRef.current = s;
 
     s.on('connect', () => setStatus('connected'));

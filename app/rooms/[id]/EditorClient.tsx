@@ -1,23 +1,22 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { Awareness } from 'y-protocols/awareness';
 
 type Props = { roomId: string };
 
-// simple helpers
+// simple helper
 function randColor() {
   return '#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
-}
-function userName() {
-  return 'User ' + Math.floor(Math.random()*1000);
 }
 
 export default function EditorClient({ roomId }: Props) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -28,9 +27,18 @@ export default function EditorClient({ roomId }: Props) {
       ydoc
     );
 
+    const updateUsers = () => {
+      const states = Array.from(provider.awareness.getStates().values());
+      setUsers(states.map(state => state.user));
+    };
+
+    provider.awareness.on('change', updateUsers);
+    updateUsers(); // Initial update
+
     // set presence
+    const userName = sessionStorage.getItem('userName') || 'Anonymous';
     provider.awareness.setLocalStateField('user', {
-      name: userName(),
+      name: userName,
       color: randColor(),
     });
 
@@ -38,6 +46,7 @@ export default function EditorClient({ roomId }: Props) {
     providerRef.current = provider;
 
     return () => {
+      provider.awareness.off('change', updateUsers);
       provider.destroy();
       ydoc.destroy();
       ydocRef.current = null;
@@ -73,18 +82,30 @@ function add(a, b) { return a + b }
   };
 
   return (
-    <Editor
-      height="70vh"
-      defaultLanguage="javascript"
-      theme="vs-dark"
-      options={{
-        automaticLayout: true,
-        minimap: { enabled: false },
-        wordWrap: 'on',
-        scrollBeyondLastLine: false,
-        fontSize: 14,
-      }}
-      onMount={handleMount}
-    />
+    <div>
+      <div className="p-4">
+        <h2 className="text-lg font-semibold">Users in room:</h2>
+        <ul>
+          {users.map((user, i) => (
+            <li key={i} style={{ color: user.color }}>
+              {user.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <Editor
+        height="70vh"
+        defaultLanguage="javascript"
+        theme="vs-dark"
+        options={{
+          automaticLayout: true,
+          minimap: { enabled: false },
+          wordWrap: 'on',
+          scrollBeyondLastLine: false,
+          fontSize: 14,
+        }}
+        onMount={handleMount}
+      />
+    </div>
   );
 }
