@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Awareness } from 'y-protocols/awareness';
+import { Button } from '@heroui/react';
 
 type Props = { roomId: string };
 
@@ -14,6 +15,7 @@ function randColor() {
 }
 
 export default function EditorClient({ roomId }: Props) {
+  const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -54,8 +56,43 @@ export default function EditorClient({ roomId }: Props) {
     };
   }, [roomId]);
 
+  const handleExport = () => {
+    if (editorRef.current) {
+      const content = editorRef.current.getValue();
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `codelink-room-${roomId}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleImportClick = () => {
+    const input = document.getElementById('file-importer');
+    if (input) {
+      input.click();
+    }
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && editorRef.current) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        editorRef.current?.setValue(content);
+      };
+      reader.readAsText(file);
+    }
+  };
+
   // Bind Monaco ⇄ Yjs after the editor mounts (and only in the browser)
   const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
+    editorRef.current = editor;
     const ydoc = ydocRef.current!;
     const provider = providerRef.current!;
     const ytext = ydoc.getText('monaco');
@@ -83,15 +120,28 @@ function add(a, b) { return a + b }
 
   return (
     <div>
-      <div className="p-4">
-        <h2 className="text-lg font-semibold">Users in room:</h2>
-        <ul>
-          {users.map((user, i) => (
-            <li key={i} style={{ color: user.color }}>
-              {user.name}
-            </li>
-          ))}
-        </ul>
+      <div className="p-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold">Users in room:</h2>
+          <ul>
+            {users.map((user, i) => (
+              <li key={i} style={{ color: user.color }}>
+                {user.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            id="file-importer"
+            style={{ display: 'none' }}
+            onChange={handleFileImport}
+            accept=".js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.py"
+          />
+          <Button onPress={handleImportClick}>Import</Button>
+          <Button onPress={handleExport}>Export</Button>
+        </div>
       </div>
       <Editor
         height="70vh"
