@@ -72,7 +72,7 @@ export default function Home() {
               </>
             ) : (
               <div className="flex flex-col items-start px-4 w-full">
-                <h2 className="text-2xl font-semibold mb-1">What's your name?</h2>
+                <h2 className="text-2xl font-semibold mb-1">What&apos;s your name?</h2>
                 <p className="text-sm font-medium mb-5 text-gray-500">
                   Please enter your name to create a room.
                 </p>

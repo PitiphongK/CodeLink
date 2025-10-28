@@ -18,7 +18,7 @@ export default function SocketDemo() {
   }, []);
 
   const pingServer = () => {
-    socketRef.current?.emit('ping:client', { hello: 'world' }, (ack: any) => {
+    socketRef.current?.emit('ping:client', { hello: 'world' }, (ack: { ok: boolean, at: number }) => {
       console.log('ack from server', ack);
     });
   };

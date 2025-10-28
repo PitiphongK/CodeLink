@@ -3,7 +3,7 @@
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { MonacoBinding } from 'y-monaco'
-import Editor, { DiffEditor, useMonaco, loader } from '@monaco-editor/react';
+import Editor from '@monaco-editor/react';
 import { useEffect } from 'react';
 
 // Yjs document holds the shared data
@@ -24,15 +24,18 @@ export default function CodeEditor() {
   
   useEffect(() => {
     console.log('Awareness states:', awareness.getStates().values())
-  }, [awareness])
+  }, [])
   // Create a new binding for Yjs and Monaco Editor
-  const handleEditorDidMount = (editor: any) => {
-    new MonacoBinding(
-      ytext,
-      editor.getModel(),
-      new Set([editor]),
-      provider.awareness
-    );
+  const handleEditorDidMount = (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
+    const model = editor.getModel();
+    if (model) {
+      new MonacoBinding(
+        ytext,
+        model,
+        new Set([editor]),
+        provider.awareness
+      );
+    }
   };
 
   return (

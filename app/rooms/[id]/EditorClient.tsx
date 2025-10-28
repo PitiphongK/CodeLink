@@ -46,7 +46,7 @@ export default function EditorClient({ roomId }: Props) {
   }, [roomId]);
 
   // Bind Monaco ⇄ Yjs after the editor mounts (and only in the browser)
-  const handleMount = async (editor: any, monaco: typeof import('monaco-editor')) => {
+  const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
     const ydoc = ydocRef.current!;
     const provider = providerRef.current!;
     const ytext = ydoc.getText('monaco');
@@ -54,12 +54,15 @@ export default function EditorClient({ roomId }: Props) {
     // IMPORTANT: dynamically import y-monaco only on client
     const { MonacoBinding } = await import('y-monaco');
 
-    new MonacoBinding(
-      ytext,
-      editor.getModel(),
-      new Set([editor]),
-      provider.awareness
-    );
+    const model = editor.getModel();
+    if (model) {
+      new MonacoBinding(
+        ytext,
+        model,
+        new Set([editor]),
+        provider.awareness
+      );
+    }
 
     // optional: initial value
     if (!editor.getValue()) {
