@@ -6,6 +6,8 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Awareness } from 'y-protocols/awareness';
 import { Button } from '@heroui/react';
+import ResizablePanels from '@/app/components/ResizablePanels';
+import DrawingBoard from '@/app/components/DrawingBoard';
 
 type Props = { roomId: string };
 
@@ -129,44 +131,54 @@ function add(a, b) { return a + b }
   };
 
   return (
-    <div>
-      <div className="p-4 flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-semibold">Users in room:</h2>
-          <ul>
-            {users.map((user, i) => (
-              <li key={i} style={{ color: user.color }}>
-                {user.name}
-              </li>
-            ))}
-          </ul>
+    <ResizablePanels
+      leftTitle="Code Editor"
+      rightTitle="Drawing Board"
+      defaultLeftWidth={65}
+      leftPanel={
+        <div className="h-full flex flex-col">
+          <div className="p-4 flex justify-between items-center border-b border-gray-700 bg-gray-900">
+            <div>
+              <h2 className="text-lg font-semibold">Users in room:</h2>
+              <ul>
+                {users.map((user, i) => (
+                  <li key={i} style={{ color: user.color }}>
+                    {user.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                id="file-importer"
+                style={{ display: 'none' }}
+                onChange={handleFileImport}
+                accept=".js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.py"
+              />
+              <Button onPress={handleImportClick}>Import</Button>
+              <Button onPress={handleExport}>Export</Button>
+              <Button onPress={handleInvite}>Invite</Button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <Editor
+              height="100%"
+              defaultLanguage="javascript"
+              theme="vs-dark"
+              options={{
+                automaticLayout: true,
+                minimap: { enabled: false },
+                wordWrap: 'on',
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+              }}
+              onMount={handleMount}
+            />
+          </div>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="file"
-            id="file-importer"
-            style={{ display: 'none' }}
-            onChange={handleFileImport}
-            accept=".js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.py"
-          />
-          <Button onPress={handleImportClick}>Import</Button>
-          <Button onPress={handleExport}>Export</Button>
-          <Button onPress={handleInvite}>Invite</Button>
-        </div>
-      </div>
-      <Editor
-        height="70vh"
-        defaultLanguage="javascript"
-        theme="vs-dark"
-        options={{
-          automaticLayout: true,
-          minimap: { enabled: false },
-          wordWrap: 'on',
-          scrollBeyondLastLine: false,
-          fontSize: 14,
-        }}
-        onMount={handleMount}
-      />
-    </div>
+      }
+      rightPanel={<DrawingBoard roomId={roomId} />}
+    />
   );
 }
