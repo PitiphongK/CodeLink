@@ -102,7 +102,7 @@ export default function DrawingBoard({ roomId }: DrawingBoardProps) {
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-gray-700 bg-gray-900">
         <h2 className="text-lg font-semibold mb-3">Drawing Board</h2>
-        
+{/*         
         <div className="flex gap-4 items-center mb-3">
           <Button
             size="sm"
@@ -154,7 +154,7 @@ export default function DrawingBoard({ roomId }: DrawingBoardProps) {
             className="w-32"
           />
           <span className="text-sm">{lineWidth}px</span>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex-1 bg-white relative">

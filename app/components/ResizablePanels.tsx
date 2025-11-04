@@ -74,7 +74,7 @@ export default function ResizablePanels({
         style={{ width: `${left}%` }}
       >
         {/* Left Tab */}
-        <div
+        {/* <div
           className={`absolute top-4 left-0 z-10 bg-blue-600 text-white px-3 py-1 rounded-r-md cursor-pointer transition-all duration-200 ${
             leftExpanded ? 'translate-x-0' : '-translate-x-0'
           }`}
@@ -82,7 +82,7 @@ export default function ResizablePanels({
           onMouseLeave={() => setLeftExpanded(false)}
         >
           {leftTitle}
-        </div>
+        </div> */}
         <div className="h-full overflow-hidden">
           {leftPanel}
         </div>
@@ -104,7 +104,7 @@ export default function ResizablePanels({
         style={{ width: `${right}%` }}
       >
         {/* Right Tab */}
-        <div
+        {/* <div
           className={`absolute top-4 right-0 z-10 bg-green-600 text-white px-3 py-1 rounded-l-md cursor-pointer transition-all duration-200 ${
             rightExpanded ? 'translate-x-0' : 'translate-x-0'
           }`}
@@ -112,7 +112,7 @@ export default function ResizablePanels({
           onMouseLeave={() => setRightExpanded(false)}
         >
           {rightTitle}
-        </div>
+        </div> */}
         <div className="h-full overflow-hidden">
           {rightPanel}
         </div>
