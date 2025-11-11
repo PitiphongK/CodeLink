@@ -1,19 +1,21 @@
 'use client';
-
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Awareness } from 'y-protocols/awareness';
-import { Button } from '@heroui/react';
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import ResizablePanels from '@/app/components/ResizablePanels';
-import DrawingBoard from '@/app/components/DrawingBoard';
+// import DrawingBoard from '@/app/components/DrawingBoard';
+import { Languages, languageExtensions, languageOptions } from '@/app/interfaces/languages';
+import DrawingBoard from "@/app/components/DrawingBoard";
 
 type Props = { roomId: string };
 
 // simple helper
 function randColor() {
-  return '#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
+  return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
 }
 
 export default function EditorClient({ roomId }: Props) {
@@ -21,6 +23,7 @@ export default function EditorClient({ roomId }: Props) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT);
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -70,12 +73,13 @@ export default function EditorClient({ roomId }: Props) {
 
   const handleExport = () => {
     if (editorRef.current) {
+      const fileExtension = languageExtensions[language] || '.txt';
       const content = editorRef.current.getValue();
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `codelink-room-${roomId}.txt`;
+      a.download = `codelink-room-${roomId}${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -131,12 +135,9 @@ function add(a, b) { return a + b }
   };
 
   return (
-    <ResizablePanels
-      leftTitle="Code Editor"
-      rightTitle="Drawing Board"
-      defaultLeftWidth={65}
-      leftPanel={
-        <div className="h-full flex flex-col">
+    <>
+      <div className="flex">
+        <div className="h-full flex flex-col w-1/2">
           <div className="p-4 flex justify-between items-center border-b border-gray-700 bg-gray-900">
             <div>
               <h2 className="text-lg font-semibold">Users in room:</h2>
@@ -164,7 +165,7 @@ function add(a, b) { return a + b }
           <div className="flex-1">
             <Editor
               height="100%"
-              defaultLanguage="javascript"
+              language={language}
               theme="vs-dark"
               options={{
                 automaticLayout: true,
@@ -177,8 +178,32 @@ function add(a, b) { return a + b }
             />
           </div>
         </div>
-      }
-      rightPanel={<DrawingBoard roomId={roomId} />}
-    />
+        <DrawingBoard ydoc={ydocRef.current} />
+      </div>
+      <div className='flex justify-end'>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button className="capitalize" variant="bordered">
+              {language}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            disallowEmptySelection
+            aria-label="Single selection example"
+            selectedKeys={language}
+            selectionMode="single"
+            variant="flat"
+            onSelectionChange={(key) => {
+              const selected = key.currentKey?.toString() as Languages;
+              setLanguage(selected);
+            }}
+          >
+            {(languageOptions.map((option) => (
+              <DropdownItem key={option.value}>{option.label}</DropdownItem>
+            )) as unknown as any)}
+          </DropdownMenu>
+        </Dropdown>
+      </div>
+    </>
   );
 }

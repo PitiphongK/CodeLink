@@ -1,172 +1,132 @@
-'use client';
+"use client";
+import { Stage, Layer, Line } from "react-konva";
+import { useState, useRef, useEffect } from "react";
+import { Pen, Eraser } from "lucide-react";
+import * as Y from "yjs";
 
-import { useEffect, useRef, useState } from 'react';
-import { Button } from '@heroui/react';
+interface ILine {
+  points: number[];
+  tool: string;
+}
 
-type DrawingBoardProps = {
-  roomId: string;
-};
-
-type DrawingTool = 'pen' | 'eraser';
-
-export default function DrawingBoard({ roomId }: DrawingBoardProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [tool, setTool] = useState<DrawingTool>('pen');
-  const [color, setColor] = useState('#000000');
-  const [lineWidth, setLineWidth] = useState(2);
+const DrawingBoard = ({ ydoc }: { ydoc: Y.Doc | null }) => {
+  const [tool, setTool] = useState("pen");
+  const [lines, setLines] = useState<ILine[]>([]);
+  const isDrawing = useRef(false);
+  const yLines = ydoc?.getArray<ILine>("drawing");
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!yLines) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    const resizeCanvas = () => {
-      const parent = canvas.parentElement;
-      if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-        // Fill with white background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+    const observer = () => {
+      setLines(yLines.toArray());
     };
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    yLines.observe(observer);
+
+    // Set initial state
+    setLines(yLines.toArray());
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      yLines.unobserve(observer);
     };
-  }, []);
+  }, [yLines]);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setIsDrawing(true);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+  const handleMouseDown = (e: any) => {
+    isDrawing.current = true;
+    const pos = e.target.getStage().getPointerPosition();
+    if (yLines) {
+      yLines.push([{ points: [pos.x, pos.y], tool }]);
+    }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+  const handleMouseMove = (e: any) => {
+    if (!isDrawing.current) {
+      return;
+    }
+    const stage = e.target.getStage();
+    const point = stage.getPointerPosition();
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-    ctx.lineWidth = tool === 'eraser' ? lineWidth * 3 : lineWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    ctx.lineTo(x, y);
-    ctx.stroke();
+    if (yLines) {
+      const lastLine = yLines.get(yLines.length - 1);
+      if (lastLine) {
+        // add point
+        lastLine.points = lastLine.points.concat([point.x, point.y]);
+        const newLines = yLines.toArray();
+        newLines.splice(yLines.length - 1, 1, lastLine);
+        // Manually trigger update for remote clients
+        // This is a bit of a hack, but Yjs array updates on nested objects are tricky
+        yLines.delete(yLines.length - 1);
+        yLines.push([lastLine]);
+      }
+    }
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
+  const handleMouseUp = () => {
+    isDrawing.current = false;
   };
 
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const handleLineClick = (index: number) => {
+    if (tool === "eraser") {
+      if (yLines) {
+        yLines.delete(index, 1);
+      }
+    }
   };
-
-  const colors = ['#000000', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-4 border-b border-gray-700 bg-gray-900">
-        <h2 className="text-lg font-semibold mb-3">Drawing Board</h2>
-{/*         
-        <div className="flex gap-4 items-center mb-3">
-          <Button
-            size="sm"
-            color={tool === 'pen' ? 'primary' : 'default'}
-            onPress={() => setTool('pen')}
+    <div className="flex flex-col h-full">
+      <div className="p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setTool("pen")}
+            className={`p-2 rounded ${
+              tool === "pen" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
           >
-            Pen
-          </Button>
-          <Button
-            size="sm"
-            color={tool === 'eraser' ? 'primary' : 'default'}
-            onPress={() => setTool('eraser')}
+            <Pen size={20} />
+          </button>
+          <button
+            onClick={() => setTool("eraser")}
+            className={`p-2 rounded ${
+              tool === "eraser" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
           >
-            Eraser
-          </Button>
-          <Button
-            size="sm"
-            color="danger"
-            onPress={clearCanvas}
-          >
-            Clear
-          </Button>
+            <Eraser size={20} />
+          </button>
         </div>
-
-        <div className="flex gap-2 items-center">
-          <span className="text-sm">Colors:</span>
-          {colors.map((c) => (
-            <button
-              key={c}
-              className="w-6 h-6 rounded-full border-2 border-white"
-              style={{
-                backgroundColor: c,
-                borderColor: color === c ? '#fff' : '#555',
-                transform: color === c ? 'scale(1.2)' : 'scale(1)',
-              }}
-              onClick={() => setColor(c)}
-            />
-          ))}
-        </div>
-
-        <div className="flex gap-2 items-center mt-3">
-          <span className="text-sm">Size:</span>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            value={lineWidth}
-            onChange={(e) => setLineWidth(Number(e.target.value))}
-            className="w-32"
-          />
-          <span className="text-sm">{lineWidth}px</span>
-        </div> */}
       </div>
-
-      <div className="flex-1 bg-white relative">
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 cursor-crosshair"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-        />
+      <div className="flex-grow w-full h-full">
+        <Stage
+          width={window.innerWidth / 2} // Adjust as needed
+          height={window.innerHeight - 100} // Adjust as needed
+          onMouseDown={handleMouseDown}
+          onMousemove={handleMouseMove}
+          onMouseup={handleMouseUp}
+          className="bg-white"
+        >
+          <Layer>
+            {lines.map((line, i) => (
+              <Line
+                key={i}
+                points={line.points}
+                stroke="black"
+                strokeWidth={5}
+                tension={0.5}
+                lineCap="round"
+                lineJoin="round"
+                globalCompositeOperation={
+                  line.tool === "eraser" ? "destination-out" : "source-over"
+                }
+                onClick={() => handleLineClick(i)}
+                onTap={() => handleLineClick(i)}
+              />
+            ))}
+          </Layer>
+        </Stage>
       </div>
     </div>
   );
-}
+};
+
+export default DrawingBoard;
