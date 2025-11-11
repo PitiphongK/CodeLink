@@ -1,7 +1,8 @@
 "use client";
 import { Stage, Layer, Line } from "react-konva";
 import { useState, useRef, useEffect } from "react";
-import { Pen, Eraser } from "lucide-react";
+import { Pen, Eraser, Undo, Redo } from "lucide-react";
+import { Button } from "@heroui/react";
 import * as Y from "yjs";
 
 interface ILine {
@@ -10,118 +11,59 @@ interface ILine {
 }
 
 const DrawingBoard = ({ ydoc }: { ydoc: Y.Doc | null }) => {
-  const [tool, setTool] = useState("pen");
-  const [lines, setLines] = useState<ILine[]>([]);
-  const isDrawing = useRef(false);
-  const yLines = ydoc?.getArray<ILine>("drawing");
-
-  useEffect(() => {
-    if (!yLines) return;
-
-    const observer = () => {
-      setLines(yLines.toArray());
-    };
-
-    yLines.observe(observer);
-
-    // Set initial state
-    setLines(yLines.toArray());
-
-    return () => {
-      yLines.unobserve(observer);
-    };
-  }, [yLines]);
-
-  const handleMouseDown = (e: any) => {
-    isDrawing.current = true;
-    const pos = e.target.getStage().getPointerPosition();
-    if (yLines) {
-      yLines.push([{ points: [pos.x, pos.y], tool }]);
-    }
-  };
-
-  const handleMouseMove = (e: any) => {
-    if (!isDrawing.current) {
-      return;
-    }
-    const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
-
-    if (yLines) {
-      const lastLine = yLines.get(yLines.length - 1);
-      if (lastLine) {
-        // add point
-        lastLine.points = lastLine.points.concat([point.x, point.y]);
-        const newLines = yLines.toArray();
-        newLines.splice(yLines.length - 1, 1, lastLine);
-        // Manually trigger update for remote clients
-        // This is a bit of a hack, but Yjs array updates on nested objects are tricky
-        yLines.delete(yLines.length - 1);
-        yLines.push([lastLine]);
-      }
-    }
-  };
-
-  const handleMouseUp = () => {
-    isDrawing.current = false;
-  };
-
-  const handleLineClick = (index: number) => {
-    if (tool === "eraser") {
-      if (yLines) {
-        yLines.delete(index, 1);
-      }
-    }
-  };
+  const [tool, setTool] = useState<string>('pen');
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setTool("pen")}
-            className={`p-2 rounded ${
-              tool === "pen" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+    <div className="relative h-full w-1/2">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 p-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md">
+        <div className="flex space-x-2 items-center">
+          <Button
+            isIconOnly
+            aria-label="Pen"
+            color="primary"
+            variant={tool === 'pen' ? 'solid' : 'ghost'}
+            onPress={() => { setTool('pen') }}
           >
-            <Pen size={20} />
-          </button>
-          <button
-            onClick={() => setTool("eraser")}
-            className={`p-2 rounded ${
-              tool === "eraser" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            <Pen size={16} />
+          </Button>
+          <Button
+            isIconOnly
+            aria-label="Eraser"
+            color="primary"
+            variant={tool === 'eraser' ? 'solid' : 'ghost'}
+            onPress={() => { setTool('eraser') }}
           >
-            <Eraser size={20} />
-          </button>
+            <Eraser size={16} />
+          </Button>
+          <Button
+            isIconOnly
+            aria-label="Undo"
+            color="default"
+            onPress={() => { /* TODO: implement undo */ }}
+          >
+            <Undo size={16} />
+          </Button>
+          <Button
+            isIconOnly
+            aria-label="Redo"
+            color="default"
+            onPress={() => { /* TODO: implement redo */ }}
+          >
+            <Redo size={16} />
+          </Button>
         </div>
       </div>
       <div className="flex-grow w-full h-full">
         <Stage
           width={window.innerWidth / 2} // Adjust as needed
           height={window.innerHeight - 100} // Adjust as needed
-          onMouseDown={handleMouseDown}
-          onMousemove={handleMouseMove}
-          onMouseup={handleMouseUp}
-          className="bg-white"
+          // onMouseDown={handleMouseDown}
+          // onMousemove={handleMouseMove}
+          // onMouseup={handleMouseUp}
+          className="bg-white position-fixed top-0 left-0 w-full h-full"
         >
           <Layer>
-            {lines.map((line, i) => (
-              <Line
-                key={i}
-                points={line.points}
-                stroke="black"
-                strokeWidth={5}
-                tension={0.5}
-                lineCap="round"
-                lineJoin="round"
-                globalCompositeOperation={
-                  line.tool === "eraser" ? "destination-out" : "source-over"
-                }
-                onClick={() => handleLineClick(i)}
-                onTap={() => handleLineClick(i)}
-              />
-            ))}
+
           </Layer>
         </Stage>
       </div>
