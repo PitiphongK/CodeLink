@@ -111,7 +111,7 @@ const DrawingBoard = ({ ydoc }: { ydoc: Y.Doc | null }) => {
                 key={i}
                 points={line.points}
                 stroke="black"
-                strokeWidth={5}
+                strokeWidth={line.tool === "eraser" ? 20 : 5}
                 tension={0.5}
                 lineCap="round"
                 lineJoin="round"
