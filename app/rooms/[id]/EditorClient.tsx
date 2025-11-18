@@ -10,6 +10,7 @@ import ResizablePanels from '@/app/components/ResizablePanels';
 // import DrawingBoard from '@/app/components/DrawingBoard';
 import { Languages, languageExtensions, languageOptions } from '@/app/interfaces/languages';
 import DrawingBoard from "@/app/components/DrawingBoard";
+import EditorOverlayDrawing from "@/app/components/EditorOverlayDrawing";
 
 type Props = { roomId: string };
 
@@ -162,7 +163,7 @@ function add(a, b) { return a + b }
               <Button onPress={handleInvite}>Invite</Button>
             </div>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <Editor
               height="100%"
               language={language}
@@ -176,6 +177,8 @@ function add(a, b) { return a + b }
               }}
               onMount={handleMount}
             />
+            {/* overlay drawing component sits on top of the editor area */}
+            <EditorOverlayDrawing ydoc={ydocRef.current} />
           </div>
         </div>
         <DrawingBoard ydoc={ydocRef.current} />
