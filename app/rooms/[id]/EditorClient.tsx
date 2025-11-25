@@ -1,16 +1,11 @@
 'use client';
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from 'react';
-import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { Awareness } from 'y-protocols/awareness';
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
-import ResizablePanels from '@/app/components/ResizablePanels';
-// import DrawingBoard from '@/app/components/DrawingBoard';
-import { Languages, languageExtensions, languageOptions } from '@/app/interfaces/languages';
+import Toolbar from '@/app/components/Toolbar';
 import DrawingBoard from "@/app/components/DrawingBoard";
-import EditorOverlayDrawing from "@/app/components/EditorOverlayDrawing";
+import EditorComponent from '@/app/components/Editor';
+import { Languages, languageExtensions } from '@/app/interfaces/languages';
 
 type Props = { roomId: string };
 
@@ -88,13 +83,6 @@ export default function EditorClient({ roomId }: Props) {
     }
   };
 
-  const handleImportClick = () => {
-    const input = document.getElementById('file-importer');
-    if (input) {
-      input.click();
-    }
-  };
-
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && editorRef.current) {
@@ -135,80 +123,35 @@ export default function EditorClient({ roomId }: Props) {
     }
   }
 
-  // Bind Monaco ⇄ Yjs after the editor mounts (and only in the browser)
-  const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
-    const ydoc = ydocRef.current!;
-    const provider = providerRef.current!;
-    const ytext = ydoc.getText('monaco');
+  useEffect(() => {
+    const handleExportEvent = () => handleExport();
+    window.addEventListener('toolbar:export', handleExportEvent);
 
-    // IMPORTANT: dynamically import y-monaco only on client
-    const { MonacoBinding } = await import('y-monaco');
+    const fileInput = document.getElementById('toolbar-file-importer');
+    const handleImportChange = (e: Event) => handleFileImport(e as unknown as React.ChangeEvent<HTMLInputElement>);
 
-    const model = editor.getModel();
-    if (model) {
-      new MonacoBinding(
-        ytext,
-        model,
-        new Set([editor]),
-        provider.awareness
-      );
+    fileInput?.addEventListener('change', handleImportChange);
+
+    return () => {
+      window.removeEventListener('toolbar:export', handleExportEvent);
+      fileInput?.removeEventListener('change', handleImportChange);
     }
+  }, [language]);
 
-    // optional: initial value
-    if (!editor.getValue()) {
-      editor.setValue(`// Room: ${roomId}
-function add(a, b) { return a + b }
-`);
-    }
-  };
 
   return (
-    <>
-      <div className="flex">
+    <div className="flex flex-col h-full">
+      <Toolbar onRun={handleRun} running={running} onInvite={handleInvite} onImport={handleFileImport} onExport={handleExport} />
+      <div className="flex flex-1 overflow-hidden">
         <div className="h-full flex flex-col w-1/2">
-          <div className="p-4 flex justify-between items-center border-b border-gray-700 bg-gray-900">
-            <div>
-              <h2 className="text-lg font-semibold">Users in room:</h2>
-              <ul>
-                {users.map((user, i) => (
-                  <li key={i} style={{ color: user.color }}>
-                    {user.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="file"
-                id="file-importer"
-                style={{ display: 'none' }}
-                onChange={handleFileImport}
-                accept=".js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.py"
-              />
-              <Button onPress={handleImportClick}>Import</Button>
-              <Button onPress={handleExport}>Export</Button>
-              <Button onPress={handleInvite}>Invite</Button>
-              <Button onPress={handleRun} color="primary">{running ? 'Running...' : 'Run'}</Button>
-            </div>
-          </div>
-          <div className="flex-1 relative">
-            <Editor
-              height="100%"
-              language={language}
-              theme="vs-dark"
-              options={{
-                automaticLayout: true,
-                minimap: { enabled: false },
-                wordWrap: 'on',
-                scrollBeyondLastLine: false,
-                fontSize: 14,
-              }}
-              onMount={handleMount}
-            />
-            {/* overlay drawing component sits on top of the editor area */}
-            <EditorOverlayDrawing ydoc={ydocRef.current} />
-          </div>
+          <EditorComponent
+            roomId={roomId}
+            ydoc={ydocRef.current}
+            provider={providerRef.current}
+            editorRef={editorRef}
+            language={language}
+            setLanguage={setLanguage}
+          />
           {/* Run output panel */}
           <div className="mt-4 px-4">
             <h3 className="text-sm font-medium">Run output</h3>
@@ -219,30 +162,7 @@ function add(a, b) { return a + b }
         </div>
         <DrawingBoard ydoc={ydocRef.current} />
       </div>
-      <div className='flex justify-end'>
-        <Dropdown>
-          <DropdownTrigger>
-            <Button className="capitalize" variant="bordered">
-              {language}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            disallowEmptySelection
-            aria-label="Single selection example"
-            selectedKeys={language}
-            selectionMode="single"
-            variant="flat"
-            onSelectionChange={(key) => {
-              const selected = key.currentKey?.toString() as Languages;
-              setLanguage(selected);
-            }}
-          >
-            {(languageOptions.map((option) => (
-              <DropdownItem key={option.value}>{option.label}</DropdownItem>
-            )) as unknown as any)}
-          </DropdownMenu>
-        </Dropdown>
-      </div>
-    </>
+    </div>
   );
 }
+
