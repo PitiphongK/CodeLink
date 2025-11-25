@@ -107,6 +107,34 @@ export default function EditorClient({ roomId }: Props) {
     }
   };
 
+  // Run code on the server and show output
+  const [runOutput, setRunOutput] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const handleRun = async () => {
+    if (!editorRef.current) return;
+    const code = editorRef.current.getValue();
+    setRunning(true);
+    setRunOutput(null);
+    try {
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: 'python', code }),
+      });
+      const json = await res.json();
+      const out = [] as string[];
+      if (json.stdout) out.push(json.stdout);
+      if (json.stderr) out.push('\n--- STDERR ---\n' + json.stderr);
+      out.push(`\n(exit: ${json.exitCode ?? 'unknown'}${json.timedOut ? ', timed out' : ''})`);
+      setRunOutput(out.join('\n'))
+    } catch (err: any) {
+      setRunOutput(String(err?.message ?? err))
+    } finally {
+      setRunning(false)
+    }
+  }
+
   // Bind Monaco ⇄ Yjs after the editor mounts (and only in the browser)
   const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -161,6 +189,7 @@ function add(a, b) { return a + b }
               <Button onPress={handleImportClick}>Import</Button>
               <Button onPress={handleExport}>Export</Button>
               <Button onPress={handleInvite}>Invite</Button>
+              <Button onPress={handleRun} color="primary">{running ? 'Running...' : 'Run'}</Button>
             </div>
           </div>
           <div className="flex-1 relative">
@@ -179,6 +208,13 @@ function add(a, b) { return a + b }
             />
             {/* overlay drawing component sits on top of the editor area */}
             <EditorOverlayDrawing ydoc={ydocRef.current} />
+          </div>
+          {/* Run output panel */}
+          <div className="mt-4 px-4">
+            <h3 className="text-sm font-medium">Run output</h3>
+            <div className="mt-2 bg-black text-white p-3 rounded h-40 overflow-auto whitespace-pre-wrap font-mono text-xs">
+              {runOutput ?? <span className="text-gray-400">Press Run to execute Python code (server-side).</span>}
+            </div>
           </div>
         </div>
         <DrawingBoard ydoc={ydocRef.current} />
