@@ -6,6 +6,8 @@ import Toolbar from '@/app/components/Toolbar';
 import DrawingBoard from "@/app/components/DrawingBoard";
 import EditorComponent from '@/app/components/Editor';
 import { Languages, languageExtensions } from '@/app/interfaces/languages';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { GripHorizontal, GripVertical } from 'lucide-react';
 
 type Props = { roomId: string };
 
@@ -138,29 +140,49 @@ export default function EditorClient({ roomId }: Props) {
     }
   }, [language]);
 
-
   return (
     <div className="flex flex-col h-full">
       <Toolbar onRun={handleRun} running={running} onInvite={handleInvite} onImport={handleFileImport} onExport={handleExport} />
       <div className="flex flex-1 overflow-hidden">
-        <div className="h-full flex flex-col w-1/2">
-          <EditorComponent
-            roomId={roomId}
-            ydoc={ydocRef.current}
-            provider={providerRef.current}
-            editorRef={editorRef}
-            language={language}
-            setLanguage={setLanguage}
-          />
-          {/* Run output panel */}
-          <div className="mt-4 px-4">
-            <h3 className="text-sm font-medium">Run output</h3>
-            <div className="mt-2 bg-black text-white p-3 rounded h-40 overflow-auto whitespace-pre-wrap font-mono text-xs">
-              {runOutput ?? <span className="text-gray-400">Press Run to execute Python code (server-side).</span>}
-            </div>
-          </div>
-        </div>
-        <DrawingBoard ydoc={ydocRef.current} />
+        <PanelGroup direction="horizontal">
+          <Panel collapsible={true} collapsedSize={0} minSize={10}>
+            <PanelGroup direction="vertical">
+              <Panel maxSize={150}>
+                <EditorComponent
+                  roomId={roomId}
+                  ydoc={ydocRef.current}
+                  provider={providerRef.current}
+                  editorRef={editorRef}
+                  language={language}
+                  setLanguage={setLanguage}
+                />
+              </Panel>
+              <PanelResizeHandle className="h-[3px] bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"/>
+              <Panel
+                collapsible={true}
+                collapsedSize={0}
+                defaultSize={20}
+                minSize={10}
+                className=" bg-[#1e1e1e] flex flex-col"
+              >
+                <div className="p-4 ">
+                  <h3 className="text-sm font-medium">Terminal</h3>
+                  <div className="mt-2 text-white rounded flex-1 overflow-auto whitespace-pre-wrap font-mono text-xs">
+                    {runOutput ?? (
+                      <span className="text-gray-400">
+                        Press Run to execute Python code (server-side).
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Panel>
+            </PanelGroup>
+          </Panel>
+          <PanelResizeHandle className="w-[3px] bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"/>
+          <Panel collapsible={true} collapsedSize={0} minSize={10}>
+            <DrawingBoard ydoc={ydocRef.current} />
+          </Panel>
+        </PanelGroup>
       </div>
     </div>
   );
