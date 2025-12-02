@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
-import { UploadCloud, Download, Link2, Play, Navigation, Settings } from "lucide-react";
+import { Link2, Play, Navigation, Settings } from "lucide-react";
 
 interface Props {
   onImport?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -8,12 +8,26 @@ interface Props {
   onInvite?: () => void;
   onRun?: () => void;
   running?: boolean;
+  users: any[];
+  onFollow: (clientId: string | null) => void;
+  following: string | null;
 }
 
-export default function Toolbar({ onRun, running, onInvite, onImport, onExport }: Props) {
+export default function Toolbar({ onRun, running, onInvite, onImport, onExport, users, onFollow, following }: Props) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {
       onImport(e);
+    }
+  };
+
+  const handleFollow = (key: any) => {
+    const selectedClientId = key.currentKey?.toString();
+    if (selectedClientId) {
+      if (following === selectedClientId) {
+        onFollow(null); // Unfollow if already following
+      } else {
+        onFollow(selectedClientId);
+      }
     }
   };
 
@@ -67,9 +81,25 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport }
           <Link2 size={16} />
           <span className="hidden sm:inline text-sm">Invite</span>
         </Button>
-        <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
-          <Navigation size={16} />
-        </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
+              <Navigation size={16} />
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Follow user"
+            selectionMode="single"
+            selectedKeys={following ? [following] : []}
+            onSelectionChange={handleFollow}
+          >
+            {users.map(([clientId, state]) => (
+              <DropdownItem key={clientId}>
+                {state.user?.name || 'Anonymous'}
+              </DropdownItem>
+            ))}
+          </DropdownMenu>
+        </Dropdown>
         <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
           <Settings fill="black" size={18} />
         </Button>
