@@ -7,9 +7,12 @@ import DrawingBoard from "@/app/components/DrawingBoard";
 import Editor from '@monaco-editor/react';
 import { Languages, languageExtensions, languageOptions } from '@/app/interfaces/languages';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { useMonacoFollowScroll } from '@/app/hooks/useMonacoFollowScroll';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing';
 import LiveCursor from '@/app/components/LiveCursor';
+import RolesModal from '@/app/components/RolesModal';
+import type { AwarenessRole } from '@/app/interfaces/awareness';
 
 type Props = { roomId: string };
 
@@ -22,9 +25,16 @@ export default function EditorClient({ roomId }: Props) {
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
+  const rolesMapRef = useRef<Y.Map<AwarenessRole> | null>(null);
+  const roomMapRef = useRef<Y.Map<any> | null>(null);
   const [userStates, setUserStates] = useState<any[]>([]);
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT);
   const [following, setFollowing] = useState<string | null>(null);
+  const [rolesOpen, setRolesOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [ownerId, setOwnerId] = useState<number | null>(null);
+  const ownerInitRef = useRef(false);
+  const [myRole, setMyRole] = useState<AwarenessRole>('none');
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -62,6 +72,45 @@ export default function EditorClient({ roomId }: Props) {
       editorRef.current.onDidScrollChange(handleEditorScroll);
     }
 
+    // roles shared map
+    const rolesMap = ydoc.getMap<AwarenessRole>('roles');
+    rolesMapRef.current = rolesMap;
+
+    // Determine and persist room owner (first starter becomes owner)
+    const roomMap = ydoc.getMap<any>('room');
+    roomMapRef.current = roomMap;
+    const currentId = provider.awareness.clientID;
+    // Wait for initial sync before electing or reading owner
+    const syncedHandler = (isSynced: boolean) => {
+      if (!isSynced || ownerInitRef.current) return;
+      ownerInitRef.current = true;
+      const existingOwner = roomMap.get('owner');
+      if (existingOwner == null) {
+        roomMap.set('owner', currentId);
+      }
+      const owner = roomMap.get('owner');
+      setOwnerId(typeof owner === 'number' ? owner : null);
+      setIsOwner(owner === currentId);
+    };
+    // y-websocket emits 'synced' when initial doc sync completes
+    (provider as any).on('synced', syncedHandler);
+    // keep owner state in sync if room owner changes
+    const roomObserver = (events: any) => {
+      const owner = roomMap.get('owner');
+      setOwnerId(typeof owner === 'number' ? owner : null);
+      setIsOwner(owner === currentId);
+    };
+    roomMap.observe(roomObserver);
+
+    // keep my role in sync
+    const rolesObserver = () => {
+      const selfId = provider.awareness.clientID;
+      const role = rolesMap.get(selfId.toString()) ?? 'none';
+      setMyRole(role);
+    };
+    rolesMap.observe(rolesObserver);
+    rolesObserver();
+
     // set presence
     const userName = sessionStorage.getItem('userName') || 'Anonymous';
     provider.awareness.setLocalStateField('user', {
@@ -79,6 +128,11 @@ export default function EditorClient({ roomId }: Props) {
         // A more robust solution would involve a cleanup function from the editor component itself.
       }
       provider.awareness.off('change', updateUsers);
+      roomMapRef.current?.unobserve(roomObserver);
+      rolesMapRef.current?.unobserve(rolesObserver);
+      try {
+        (provider as any).off?.('synced', syncedHandler);
+      } catch {}
       provider.destroy();
       ydoc.destroy();
       ydocRef.current = null;
@@ -86,15 +140,42 @@ export default function EditorClient({ roomId }: Props) {
     };
   }, [roomId]);
 
-  // Effect to handle following a user's scroll position
+  // Robust follow scroll via awareness client IDs
+  useMonacoFollowScroll({
+    editor: editorRef.current,
+    awareness: providerRef.current?.awareness ?? null,
+    followTargetClientId: following ? Number(following) : null,
+    onTargetGone: () => setFollowing(null),
+  });
+
+  // Enforce roles: driver can edit, navigator is read-only and auto-follows driver
   useEffect(() => {
-    if (following) {
-      const followedUser = userStates.find(([clientId]) => clientId.toString() === following);
-      if (followedUser && followedUser[1].scroll && editorRef.current) {
-        editorRef.current.setScrollTop(followedUser[1].scroll.top);
+    const editor = editorRef.current;
+    const awareness = providerRef.current?.awareness;
+    const rolesMap = rolesMapRef.current;
+    if (!editor || !awareness || !rolesMap) return;
+
+    const selfId = awareness.clientID;
+    const role = rolesMap.get(selfId.toString()) ?? 'none';
+
+    // Set readOnly for navigators
+    const isNavigator = role === 'navigator';
+    editor.updateOptions({ readOnly: isNavigator });
+
+    // Find current driver and follow if navigator
+    if (isNavigator) {
+      // Find first driver among known users
+      const states = userStates;
+      const driverEntry = states.find(([cid]) => rolesMap.get(cid.toString()) === 'driver');
+      if (driverEntry) {
+        const driverIdStr = driverEntry[0].toString();
+        if (following !== driverIdStr) setFollowing(driverIdStr);
       }
+    } else {
+      // If not navigator and currently following, stop following
+      if (following) setFollowing(null);
     }
-  }, [following, userStates]);
+  }, [userStates, following]);
 
   const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -211,6 +292,22 @@ export default function EditorClient({ roomId }: Props) {
 
   return (
     <div className="flex flex-col h-full">
+      <RolesModal
+        isOpen={rolesOpen}
+        onClose={() => setRolesOpen(false)}
+        isOwner={isOwner}
+        users={userStates}
+        getRole={(clientId) => rolesMapRef.current?.get(clientId.toString()) ?? 'none'}
+        onSetRole={(clientId, role) => {
+          if (!isOwner) return;
+          rolesMapRef.current?.set(clientId.toString(), role);
+        }}
+        currentOwnerId={ownerId}
+        onTransferOwner={(targetId) => {
+          if (!isOwner) return;
+          roomMapRef.current?.set('owner', targetId);
+        }}
+      />
       {userStates
         .filter(([clientId]) => clientId !== providerRef.current?.awareness.clientID)
         .map(([clientId, state]) => {
@@ -236,6 +333,13 @@ export default function EditorClient({ roomId }: Props) {
         users={userStates.filter(([clientId]) => clientId !== providerRef.current?.awareness.clientID)}
         onFollow={setFollowing}
         following={following}
+        followingName={
+          following
+            ? (userStates.find(([cid]) => cid.toString() === following)?.[1].user?.name ?? null)
+            : null
+        }
+        onManageRoles={() => setRolesOpen(true)}
+        isOwner={isOwner}
       />
       <div className="flex flex-1 overflow-hidden">
         <PanelGroup direction="horizontal">

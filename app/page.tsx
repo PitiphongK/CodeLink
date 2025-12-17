@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input } from "@heroui/react";
 import { ThemeSwitcher } from './components/theme-switcher';
 
@@ -10,6 +10,7 @@ export default function Home() {
   const [userName, setUserName] = useState('');
   const [step, setStep] = useState('initial'); // 'initial', 'join-name', 'create-name'
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     // Pre-fill username if it exists in session storage
@@ -17,7 +18,15 @@ export default function Home() {
     if (storedUserName) {
       setUserName(storedUserName);
     }
-  }, []);
+    // If arriving with a join param, prefill room and show name step
+    const joinId = searchParams?.get('join');
+    if (joinId) {
+      setJoinRoomId(joinId);
+      if (!storedUserName) {
+        setStep('join-name');
+      }
+    }
+  }, [searchParams, router]);
 
   const handleJoinRoom = () => {
     if (userName.trim() && joinRoomId.trim()) {

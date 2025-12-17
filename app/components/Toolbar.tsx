@@ -11,9 +11,12 @@ interface Props {
   users: any[];
   onFollow: (clientId: string | null) => void;
   following: string | null;
+  followingName?: string | null;
+  onManageRoles?: () => void;
+  isOwner?: boolean;
 }
 
-export default function Toolbar({ onRun, running, onInvite, onImport, onExport, users, onFollow, following }: Props) {
+export default function Toolbar({ onRun, running, onInvite, onImport, onExport, users, onFollow, following, followingName, onManageRoles, isOwner }: Props) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {
       onImport(e);
@@ -23,6 +26,7 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport, 
   const handleFollow = (key: any) => {
     const selectedClientId = key.currentKey?.toString();
     if (selectedClientId) {
+      if (selectedClientId === "__stop__") return; // handled by onPress
       if (following === selectedClientId) {
         onFollow(null); // Unfollow if already following
       } else {
@@ -81,25 +85,9 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport, 
           <Link2 size={16} />
           <span className="hidden sm:inline text-sm">Invite</span>
         </Button>
-        <Dropdown>
-          <DropdownTrigger>
-            <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
-              <Navigation size={16} />
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Follow user"
-            selectionMode="single"
-            selectedKeys={following ? [following] : []}
-            onSelectionChange={handleFollow}
-          >
-            {users.map(([clientId, state]) => (
-              <DropdownItem key={clientId}>
-                {state.user?.name || 'Anonymous'}
-              </DropdownItem>
-            ))}
-          </DropdownMenu>
-        </Dropdown>
+        <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onManageRoles}>
+          <Navigation size={16} />
+        </Button>
         <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
           <Settings fill="black" size={18} />
         </Button>
