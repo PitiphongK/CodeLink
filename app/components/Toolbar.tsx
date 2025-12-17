@@ -93,8 +93,8 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport, 
         <Button isIconOnly className={`bg-[#2c2c2c] hover:bg-[#4f4f4f] ${overlayActive ? 'bg-blue-600' : ''}`} size="sm" onPress={onToggleOverlay} aria-label="Toggle overlay drawing">
           {overlayActive ? <Pen size={16} /> : <PenOff size={16} />}
         </Button>
-        <Button className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onManageRoles}>
-          <span className="text-sm">Roles</span>
+        <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onManageRoles}>
+          <Navigation size={16} />
         </Button>
         <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
           <Settings fill="black" size={18} />
