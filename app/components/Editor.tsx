@@ -62,7 +62,7 @@ export default function EditorComponent({ roomId, ydoc, provider, editorRef, lan
         onMount={handleMount}
       />
       {/* overlay drawing component sits on top of the editor area */}
-      <EditorOverlayDrawing ydoc={ydoc} />
+      {/* <EditorOverlayDrawing ydoc={ydoc} /> */}
       <div className='absolute bottom-4 right-4 z-10'>
         <Dropdown>
           <DropdownTrigger>

@@ -35,6 +35,8 @@ export default function EditorClient({ roomId }: Props) {
   const [ownerId, setOwnerId] = useState<number | null>(null);
   const ownerInitRef = useRef(false);
   const [myRole, setMyRole] = useState<AwarenessRole>('none');
+  const [overlayActive, setOverlayActive] = useState(false);
+  const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen');
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -340,6 +342,10 @@ export default function EditorClient({ roomId }: Props) {
         }
         onManageRoles={() => setRolesOpen(true)}
         isOwner={isOwner}
+        drawingTool={drawingTool}
+        onChangeDrawingTool={setDrawingTool}
+        overlayActive={overlayActive}
+        onToggleOverlay={() => setOverlayActive((s) => !s)}
       />
       <div className="flex flex-1 overflow-hidden">
         <PanelGroup direction="horizontal">
@@ -360,7 +366,7 @@ export default function EditorClient({ roomId }: Props) {
                     }}
                     onMount={handleMount}
                   />
-                  <EditorOverlayDrawing ydoc={ydocRef.current} />
+                  <EditorOverlayDrawing ydoc={ydocRef.current} active={overlayActive} tool={drawingTool} />
                   <div className='absolute bottom-4 right-4 z-10'>
                     <Dropdown>
                       <DropdownTrigger>
@@ -410,7 +416,7 @@ export default function EditorClient({ roomId }: Props) {
           </Panel>
           <PanelResizeHandle className="w-[3px] bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"/>
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
-            <DrawingBoard ydoc={ydocRef.current} />
+            <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
           </Panel>
         </PanelGroup>
       </div>

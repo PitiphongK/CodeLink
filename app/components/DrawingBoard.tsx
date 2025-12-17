@@ -1,7 +1,6 @@
 "use client";
 import { Stage, Layer, Line } from "react-konva";
 import { useState, useRef, useEffect } from "react";
-import { Pen, Eraser } from "lucide-react";
 import * as Y from "yjs";
 
 interface ILine {
@@ -9,8 +8,7 @@ interface ILine {
   tool: string;
 }
 
-const DrawingBoard = ({ ydoc }: { ydoc: Y.Doc | null }) => {
-  const [tool, setTool] = useState("pen");
+const DrawingBoard = ({ ydoc, tool }: { ydoc: Y.Doc | null, tool: "pen" | "eraser" }) => {
   const [lines, setLines] = useState<ILine[]>([]);
   const isDrawing = useRef(false);
   const yLines = ydoc?.getArray<ILine>("drawing");
@@ -76,26 +74,6 @@ const DrawingBoard = ({ ydoc }: { ydoc: Y.Doc | null }) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-2 bg-gray-100 dark:bg-[#1e1e1e] border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setTool("pen")}
-            className={`p-2 rounded ${
-              tool === "pen" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            <Pen size={20} />
-          </button>
-          <button
-            onClick={() => setTool("eraser")}
-            className={`p-2 rounded ${
-              tool === "eraser" ? "bg-blue-500 text-white" : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            <Eraser size={20} />
-          </button>
-        </div>
-      </div>
       <div className="flex-grow w-full h-full">
         <Stage
           width={window.innerWidth / 2} // Adjust as needed
