@@ -73,7 +73,7 @@ export default function EditorComponent({ roomId, ydoc, provider, editorRef, lan
           <DropdownMenu
             disallowEmptySelection
             aria-label="Language selection"
-            selectedKeys={language}
+            selectedKeys={[language]}
             selectionMode="single"
             variant="flat"
             onSelectionChange={(key) => {
@@ -81,9 +81,9 @@ export default function EditorComponent({ roomId, ydoc, provider, editorRef, lan
               setLanguage(selected);
             }}
           >
-            {(languageOptions.map((option) => (
+            {languageOptions.map((option) => (
               <DropdownItem key={option.value}>{option.label}</DropdownItem>
-            )) as unknown as any)}
+            ))}
           </DropdownMenu>
         </Dropdown>
       </div>

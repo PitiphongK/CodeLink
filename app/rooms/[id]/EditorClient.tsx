@@ -6,7 +6,7 @@ import Toolbar from '@/app/components/Toolbar';
 import DrawingBoard from "@/app/components/DrawingBoard";
 import Editor from '@monaco-editor/react';
 import { Languages, languageExtensions, languageOptions } from '@/app/interfaces/languages';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelGroupHandle } from 'react-resizable-panels';
 import { useMonacoFollowScroll } from '@/app/hooks/useMonacoFollowScroll';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing';
@@ -27,6 +27,7 @@ export default function EditorClient({ roomId }: Props) {
   const providerRef = useRef<WebsocketProvider | null>(null);
   const rolesMapRef = useRef<Y.Map<AwarenessRole> | null>(null);
   const roomMapRef = useRef<Y.Map<any> | null>(null);
+  const panelsMapRef = useRef<Y.Map<any> | null>(null);
   const [userStates, setUserStates] = useState<any[]>([]);
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT);
   const [following, setFollowing] = useState<string | null>(null);
@@ -37,6 +38,10 @@ export default function EditorClient({ roomId }: Props) {
   const [myRole, setMyRole] = useState<AwarenessRole>('none');
   const [overlayActive, setOverlayActive] = useState(false);
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen');
+  const [hLayout, setHLayout] = useState<number[] | null>(null);
+  const [vLayout, setVLayout] = useState<number[] | null>(null);
+  const hGroupRef = useRef<ImperativePanelGroupHandle | null>(null);
+  const vGroupRef = useRef<ImperativePanelGroupHandle | null>(null);
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -104,6 +109,38 @@ export default function EditorClient({ roomId }: Props) {
     };
     roomMap.observe(roomObserver);
 
+    // panels shared map for syncing layout across participants
+    const panelsMap = ydoc.getMap<any>('panels');
+    panelsMapRef.current = panelsMap;
+
+    const ensurePanelDefaults = () => {
+      // Initialize defaults if not present
+      const hasH = Array.isArray(panelsMap.get('h'));
+      const hasV = Array.isArray(panelsMap.get('v'));
+      const defaultH = [50, 50];
+      const defaultV = [80, 20];
+      if (!hasH) panelsMap.set('h', defaultH);
+      if (!hasV) panelsMap.set('v', defaultV);
+      // Also seed local state so UI renders with values
+      setHLayout(panelsMap.get('h') ?? defaultH);
+      setVLayout(panelsMap.get('v') ?? defaultV);
+    };
+
+    const panelsObserver = () => {
+      const h = panelsMap.get('h');
+      const v = panelsMap.get('v');
+      if (Array.isArray(h)) setHLayout(h.slice());
+      if (Array.isArray(v)) setVLayout(v.slice());
+    };
+    panelsMap.observe(panelsObserver);
+
+    // After initial sync, seed defaults if needed
+    const panelsSyncedHandler = (isSynced: boolean) => {
+      if (!isSynced) return;
+      ensurePanelDefaults();
+    };
+    (provider as any).on('synced', panelsSyncedHandler);
+
     // keep my role in sync
     const rolesObserver = () => {
       const selfId = provider.awareness.clientID;
@@ -131,9 +168,11 @@ export default function EditorClient({ roomId }: Props) {
       }
       provider.awareness.off('change', updateUsers);
       roomMapRef.current?.unobserve(roomObserver);
+      panelsMapRef.current?.unobserve(panelsObserver);
       rolesMapRef.current?.unobserve(rolesObserver);
       try {
         (provider as any).off?.('synced', syncedHandler);
+        (provider as any).off?.('synced', panelsSyncedHandler);
       } catch {}
       provider.destroy();
       ydoc.destroy();
@@ -178,6 +217,85 @@ export default function EditorClient({ roomId }: Props) {
       if (following) setFollowing(null);
     }
   }, [userStates, following]);
+
+  // Ensure an owner exists; if missing or left, pick a random present user.
+  useEffect(() => {
+    const provider = providerRef.current;
+    const roomMap = roomMapRef.current;
+    if (!provider || !roomMap) return;
+
+    const states = Array.from(provider.awareness.getStates().keys());
+    const presentIds = new Set<number>(states as number[]);
+
+    const currentOwner = roomMap.get('owner');
+    const ownerMissing = currentOwner == null;
+    const ownerLeft = typeof currentOwner === 'number' && !presentIds.has(currentOwner);
+    if (ownerMissing || ownerLeft) {
+      if (presentIds.size > 0) {
+        const candidates = Array.from(presentIds);
+        const randomIdx = Math.floor(Math.random() * candidates.length);
+        const chosen = candidates[randomIdx];
+        // Deterministic arbitration: only the smallest clientId writes
+        const arbiter = Math.min(...candidates);
+        const selfId = provider.awareness.clientID;
+        if (selfId === arbiter) {
+          roomMap.set('owner', chosen);
+        }
+      } else {
+        // No users left - mark destroyed for cleanup
+        roomMap.set('destroyed', true);
+      }
+    }
+  }, [userStates, ownerId]);
+
+  // Proactive ownership handoff on tab close and destroy when last user leaves
+  useEffect(() => {
+    const handleOwnerExit = () => {
+      const provider = providerRef.current;
+      const rolesMap = rolesMapRef.current;
+      const roomMap = roomMapRef.current;
+      const panelsMap = panelsMapRef.current;
+      if (!provider || !roomMap) return;
+      const selfId = provider.awareness.clientID;
+      const states = Array.from(provider.awareness.getStates().keys()) as number[];
+      const presentIds = states.filter((cid) => cid !== selfId);
+      const presentCountExcludingSelf = presentIds.length;
+
+      if (!isOwner) return;
+
+      if (presentCountExcludingSelf > 0) {
+        // Proactively pick a random next owner among other participants
+        const randomIdx = Math.floor(Math.random() * presentIds.length);
+        const nextOwner = presentIds[randomIdx];
+        try {
+          roomMap.set('owner', nextOwner);
+        } catch {}
+      } else {
+        // Owner is last user: mark destroyed and clear ephemeral maps
+        try {
+          roomMap.set('destroyed', true);
+          if (rolesMap) {
+            for (const k of Array.from((rolesMap as any).keys?.() ?? [])) {
+              rolesMap.delete(String(k));
+            }
+          }
+          if (panelsMap) {
+            for (const k of Array.from((panelsMap as any).keys?.() ?? [])) {
+              panelsMap.delete(String(k));
+            }
+          }
+        } catch {}
+      }
+    };
+
+    // Use both pagehide and beforeunload for broader browser coverage
+    window.addEventListener('pagehide', handleOwnerExit, { capture: true });
+    window.addEventListener('beforeunload', handleOwnerExit);
+    return () => {
+      window.removeEventListener('pagehide', handleOwnerExit, { capture: true } as any);
+      window.removeEventListener('beforeunload', handleOwnerExit);
+    };
+  }, [isOwner]);
 
   const handleMount = async (editor: import('monaco-editor').editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -292,6 +410,18 @@ export default function EditorClient({ roomId }: Props) {
     }
   }, [language, following]);
 
+  // Apply incoming layout updates to PanelGroups
+  useEffect(() => {
+    if (hLayout && hGroupRef.current) {
+      try { hGroupRef.current.setLayout(hLayout); } catch {}
+    }
+  }, [hLayout]);
+  useEffect(() => {
+    if (vLayout && vGroupRef.current) {
+      try { vGroupRef.current.setLayout(vLayout); } catch {}
+    }
+  }, [vLayout]);
+
   return (
     <div className="flex flex-col h-full">
       <RolesModal
@@ -348,9 +478,28 @@ export default function EditorClient({ roomId }: Props) {
         onToggleOverlay={() => setOverlayActive((s) => !s)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <PanelGroup direction="horizontal">
+        <PanelGroup
+          ref={hGroupRef}
+          direction="horizontal"
+          onLayout={(sizes) => {
+            // Only driver writes layout; others just observe
+            if (myRole === 'driver') {
+              panelsMapRef.current?.set('h', sizes);
+            }
+            setHLayout(sizes);
+          }}
+        >
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
-            <PanelGroup direction="vertical">
+            <PanelGroup
+              ref={vGroupRef}
+              direction="vertical"
+              onLayout={(sizes) => {
+                if (myRole === 'driver') {
+                  panelsMapRef.current?.set('v', sizes);
+                }
+                setVLayout(sizes);
+              }}
+            >
               <Panel>
                 <div className="flex-1 relative h-full">
                   <Editor
@@ -393,7 +542,10 @@ export default function EditorClient({ roomId }: Props) {
                   </div>
                 </div>
               </Panel>
-              <PanelResizeHandle className="h-[3px] bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"/>
+              <PanelResizeHandle
+                disabled={myRole === 'navigator'}
+                className="h-[3px] bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"
+              />
               <Panel
                 collapsible={true}
                 collapsedSize={0}
@@ -414,7 +566,10 @@ export default function EditorClient({ roomId }: Props) {
               </Panel>
             </PanelGroup>
           </Panel>
-          <PanelResizeHandle className="w-[3px] bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"/>
+          <PanelResizeHandle
+            disabled={myRole === 'navigator'}
+            className="w-[3px] bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"
+          />
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
             <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
           </Panel>

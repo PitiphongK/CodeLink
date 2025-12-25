@@ -8,11 +8,11 @@ export type AwarenessScroll = { top: number; left: number; ts: number };
 export type AwarenessState = { user?: AwarenessUser; scroll?: AwarenessScroll };
 
 // 
-function throttle<T extends (...args: any[]) => void>(fn: T, waitMs: number): T {
+function throttle<T extends (...args: unknown[]) => void>(fn: T, waitMs: number): T {
   let last = 0;
-  let timer: any = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
-  return function (this: any, ...args: any[]) {
+  return function (this: unknown, ...args: unknown[]) {
     const now = Date.now();
     const remaining = waitMs - (now - last);
 
@@ -20,7 +20,7 @@ function throttle<T extends (...args: any[]) => void>(fn: T, waitMs: number): T 
       last = now;
       fn.apply(this, args);
     } else {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         last = Date.now();
         fn.apply(this, args);

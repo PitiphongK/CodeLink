@@ -2,13 +2,15 @@ import React from "react";
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
 import { Link2, Play, Navigation, Settings, Pen, Eraser, PenOff } from "lucide-react";
 
+import type { AwarenessState } from "@/app/interfaces/awareness";
+
 interface Props {
   onImport?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport?: () => void;
   onInvite?: () => void;
   onRun?: () => void;
   running?: boolean;
-  users: any[];
+  users: Array<[number, AwarenessState]>;
   onFollow: (clientId: string | null) => void;
   following: string | null;
   followingName?: string | null;
@@ -27,7 +29,7 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport, 
     }
   };
 
-  const handleFollow = (key: any) => {
+  const handleFollow = (key: { currentKey?: string | number | symbol }) => {
     const selectedClientId = key.currentKey?.toString();
     if (selectedClientId) {
       if (selectedClientId === "__stop__") return; // handled by onPress
