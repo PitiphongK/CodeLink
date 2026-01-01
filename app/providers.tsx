@@ -9,7 +9,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <HeroUIProvider>
       <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
         {children}
-        <ToastProvider placement="top-center" />
+        <ToastProvider/>
       </NextThemesProvider>
     </HeroUIProvider>
   )

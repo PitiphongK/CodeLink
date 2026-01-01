@@ -74,20 +74,20 @@ export function useRoomLanding() {
       return;
     }
     sessionStorage.setItem('userName', name);
-    const newRoomCode = generateRoomCode();
 
     try {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: newRoomCode }),
+        // No id => server generates + reserves a unique code.
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({} as any));
         addToast({
           title: 'Failed to create room',
-          description: errorData.error || 'Please try again.',
+          description: errorData?.error || 'Please try again.',
           color: 'danger',
           variant: 'solid',
           timeout: 5000,
@@ -96,8 +96,21 @@ export function useRoomLanding() {
         return;
       }
 
-      // Only navigate after successful room creation
-      router.push(`/rooms/${newRoomCode}`);
+      const data = await response.json().catch(() => ({} as any));
+      const roomId = data?.room?.id;
+      if (typeof roomId !== 'string' || !roomId) {
+        addToast({
+          title: 'Failed to create room',
+          description: 'Server returned an invalid room code. Please try again.',
+          color: 'danger',
+          variant: 'solid',
+          timeout: 5000,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push(`/rooms/${roomId}`);
     } catch (error) {
       console.error('Error creating room:', error);
       addToast({

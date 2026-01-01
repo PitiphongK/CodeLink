@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedis } from '@/app/lib/redis';
+import { generateRoomCode, isValidRoomCode } from '@/app/utils/roomCode';
 
 export const runtime = 'nodejs';
 
@@ -32,16 +33,35 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
-    const id = body?.id?.trim();
-    if (!id) return NextResponse.json({ error: 'Room ID is required' }, { status: 400 });
-
     const redis = await getRedis();
-    const newRoom: Room = { id, createdAt: new Date().toISOString() };
 
-    const created = await redis.set(roomKey(id), JSON.stringify(newRoom), { NX: true });
-    if (created !== 'OK') return NextResponse.json({ error: 'Room already exists' }, { status: 409 });
+    const requestedId = typeof body?.id === 'string' ? body.id.trim() : '';
 
-    return NextResponse.json({ room: newRoom }, { status: 201 });
+    // If the client provides an id, validate and attempt to create it.
+    if (requestedId) {
+      if (!isValidRoomCode(requestedId)) {
+        return NextResponse.json({ error: 'Invalid room code' }, { status: 400 });
+      }
+
+      const newRoom: Room = { id: requestedId, createdAt: new Date().toISOString() };
+      const created = await redis.set(roomKey(requestedId), JSON.stringify(newRoom), { NX: true });
+      if (created !== 'OK') return NextResponse.json({ error: 'Room already exists' }, { status: 409 });
+      return NextResponse.json({ room: newRoom }, { status: 201 });
+    }
+
+    // Otherwise, generate server-side and reserve atomically.
+    const maxAttempts = 16;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const id = generateRoomCode();
+      const newRoom: Room = { id, createdAt: new Date().toISOString() };
+      const created = await redis.set(roomKey(id), JSON.stringify(newRoom), { NX: true });
+      if (created === 'OK') return NextResponse.json({ room: newRoom }, { status: 201 });
+    }
+
+    return NextResponse.json(
+      { error: 'Could not allocate a room code. Please try again.' },
+      { status: 503 }
+    );
   } catch (err) {
     console.error('POST /api/rooms failed', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
