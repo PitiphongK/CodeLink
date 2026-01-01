@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       try {
         proc.kill('SIGKILL')
         timedOut = true
-      } catch (e) {
+      } catch {
         // ignore
       }
     }, 7000)
@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: String(err?.message ?? err) }), { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return new Response(JSON.stringify({ error: message }), { status: 500 })
   }
 }

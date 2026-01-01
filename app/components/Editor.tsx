@@ -1,11 +1,10 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import { Languages, languageOptions } from '@/app/interfaces/languages';
-import EditorOverlayDrawing from "@/app/components/EditorOverlayDrawing";
 
 type Props = {
   roomId: string;

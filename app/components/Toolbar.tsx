@@ -22,22 +22,10 @@ interface Props {
   onToggleOverlay?: () => void;
 }
 
-export default function Toolbar({ onRun, running, onInvite, onImport, onExport, users, onFollow, following, followingName, onManageRoles, isOwner, drawingTool, onChangeDrawingTool, overlayActive, onToggleOverlay }: Props) {
+export default function Toolbar({ onRun, running, onInvite, onImport, onExport, onManageRoles, drawingTool, onChangeDrawingTool, overlayActive, onToggleOverlay }: Props) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {
       onImport(e);
-    }
-  };
-
-  const handleFollow = (key: { currentKey?: string | number | symbol }) => {
-    const selectedClientId = key.currentKey?.toString();
-    if (selectedClientId) {
-      if (selectedClientId === "__stop__") return; // handled by onPress
-      if (following === selectedClientId) {
-        onFollow(null); // Unfollow if already following
-      } else {
-        onFollow(selectedClientId);
-      }
     }
   };
 

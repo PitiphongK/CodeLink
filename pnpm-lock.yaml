@@ -35,12 +35,6 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.54.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@xterm/addon-fit':
-        specifier: ^0.9.0
-        version: 0.9.0(@xterm/xterm@5.5.0)
-      '@xterm/xterm':
-        specifier: ^5.5.0
-        version: 5.5.0
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -62,9 +56,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      node-pty:
-        specifier: ^1.0.0
-        version: 1.0.0
       perfect-freehand:
         specifier: ^1.2.2
         version: 1.2.2
@@ -80,6 +71,9 @@ importers:
       react-resizable-panels:
         specifier: ^3.0.6
         version: 3.0.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      redis:
+        specifier: ^5.10.0
+        version: 5.10.0
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
@@ -89,6 +83,9 @@ importers:
       y-monaco:
         specifier: ^0.1.6
         version: 0.1.6(monaco-editor@0.54.0)(yjs@13.6.27)
+      y-protocols:
+        specifier: ^1.0.7
+        version: 1.0.7(yjs@13.6.27)
       y-webrtc:
         specifier: ^10.3.0
         version: 10.3.0(yjs@13.6.27)
@@ -1804,6 +1801,34 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
 
+  '@redis/bloom@5.10.0':
+    resolution: {integrity: sha512-doIF37ob+l47n0rkpRNgU8n4iacBlKM9xLiP1LtTZTvz8TloJB8qx/MgvhMhKdYG+CvCY2aPBnN2706izFn/4A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/client@5.10.0':
+    resolution: {integrity: sha512-JXmM4XCoso6C75Mr3lhKA3eNxSzkYi3nCzxDIKY+YOszYsJjuKbFgVtguVPbLMOttN4iu2fXoc2BGhdnYhIOxA==}
+    engines: {node: '>= 18'}
+
+  '@redis/json@5.10.0':
+    resolution: {integrity: sha512-B2G8XlOmTPUuZtD44EMGbtoepQG34RCDXLZbjrtON1Djet0t5Ri7/YPXvL9aomXqP8lLTreaprtyLKF4tmXEEA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/search@5.10.0':
+    resolution: {integrity: sha512-3SVcPswoSfp2HnmWbAGUzlbUPn7fOohVu2weUQ0S+EMiQi8jwjL+aN2p6V3TI65eNfVsJ8vyPvqWklm6H6esmg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
+  '@redis/time-series@5.10.0':
+    resolution: {integrity: sha512-cPkpddXH5kc/SdRhF0YG0qtjL+noqFT0AcHbQ6axhsPsO7iqPi1cjxgdkE9TNeKiBUUdCaU1DbqkR/LzbzPBhg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.10.0
+
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
@@ -2157,14 +2182,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@xterm/addon-fit@0.9.0':
-    resolution: {integrity: sha512-hDlPPbTVPYyvwXu/asW8HbJkI/2RMi0cMaJnBZYVeJB0SWP2NeESMCNr+I7CvBlyI0sAxpxOg8Wk4OMkxBz9WA==}
-    peerDependencies:
-      '@xterm/xterm': ^5.0.0
-
-  '@xterm/xterm@5.5.0':
-    resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
-
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
     engines: {node: '>= 0.6'}
@@ -2345,6 +2362,10 @@ packages:
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
+
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -3575,9 +3596,6 @@ packages:
   multimath@2.0.0:
     resolution: {integrity: sha512-toRx66cAMJ+Ccz7pMIg38xSIrtnbozk0dchXezwQDMgQmbGpfxjtv68H+L00iFL8hxDaVjrmwAFSb3I6bg8Q2g==}
 
-  nan@2.24.0:
-    resolution: {integrity: sha512-Vpf9qnVW1RaDkoNKFUvfxqAbtI8ncb8OJlqZ9wwpXzWPEsvsB1nvdUi6oYrHIkQ1Y/tMDnr1h4nczS0VB9Xykg==}
-
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -3635,9 +3653,6 @@ packages:
         optional: true
       sass:
         optional: true
-
-  node-pty@1.0.0:
-    resolution: {integrity: sha512-wtBMWWS7dFZm/VgqElrTvtfMq4GzJ6+edFI0Y0zyzygUSZMgZdraDUMUhCIvkjhJjme15qWmbyJbtAx4ot4uZA==}
 
   non-layered-tidy-tree-layout@2.0.2:
     resolution: {integrity: sha512-gkXMxRzUH+PB0ax9dUN0yYF0S25BqeAYqhgMaLUFmpXLEk7Fcu8f4emJuOAY0V8kjDICxROIKsTAKsV/v355xw==}
@@ -3892,6 +3907,10 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  redis@5.10.0:
+    resolution: {integrity: sha512-0/Y+7IEiTgVGPrLFKy8oAEArSyEJkU0zvgV5xyi9NzNQ+SLZmyFbUsWIbgPcd4UdUh00opXGKlXJwMmsis5Byw==}
+    engines: {node: '>= 18'}
 
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
@@ -4378,8 +4397,8 @@ packages:
       monaco-editor: '>=0.20.0'
       yjs: ^13.3.1
 
-  y-protocols@1.0.6:
-    resolution: {integrity: sha512-vHRF2L6iT3rwj1jub/K5tYcTT/mEYDUppgNPXwp8fmLpui9f7Yeq3OEtTLVF012j39QnV+KEQpNqoN7CWU7Y9Q==}
+  y-protocols@1.0.7:
+    resolution: {integrity: sha512-YSVsLoXxO67J6eE/nV4AtFtT3QEotZf5sK5BHxFBXso7VDUT3Tx07IfA6hsu5Q5OmBdMkQVmFZ9QOA7fikWvnw==}
     engines: {node: '>=16.0.0', npm: '>=8.0.0'}
     peerDependencies:
       yjs: ^13.0.0
@@ -6886,6 +6905,26 @@ snapshots:
       '@react-types/shared': 3.32.1(react@19.1.0)
       react: 19.1.0
 
+  '@redis/bloom@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/client@5.10.0':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/search@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
+  '@redis/time-series@5.10.0(@redis/client@5.10.0)':
+    dependencies:
+      '@redis/client': 5.10.0
+
   '@rtsao/scc@1.1.0': {}
 
   '@rushstack/eslint-patch@1.13.0': {}
@@ -7228,12 +7267,6 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@xterm/addon-fit@0.9.0(@xterm/xterm@5.5.0)':
-    dependencies:
-      '@xterm/xterm': 5.5.0
-
-  '@xterm/xterm@5.5.0': {}
-
   accepts@1.3.8:
     dependencies:
       mime-types: 2.1.35
@@ -7448,6 +7481,8 @@ snapshots:
   clsx@1.2.1: {}
 
   clsx@2.1.1: {}
+
+  cluster-key-slot@1.1.2: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -8915,8 +8950,6 @@ snapshots:
       glur: 1.1.2
       object-assign: 4.1.1
 
-  nan@2.24.0: {}
-
   nanoid@3.3.11: {}
 
   nanoid@3.3.3: {}
@@ -8959,10 +8992,6 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
-
-  node-pty@1.0.0:
-    dependencies:
-      nan: 2.24.0
 
   non-layered-tidy-tree-layout@2.0.2: {}
 
@@ -9225,6 +9254,14 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
+
+  redis@5.10.0:
+    dependencies:
+      '@redis/bloom': 5.10.0(@redis/client@5.10.0)
+      '@redis/client': 5.10.0
+      '@redis/json': 5.10.0(@redis/client@5.10.0)
+      '@redis/search': 5.10.0(@redis/client@5.10.0)
+      '@redis/time-series': 5.10.0(@redis/client@5.10.0)
 
   reflect.getprototypeof@1.0.10:
     dependencies:
@@ -9851,7 +9888,7 @@ snapshots:
       monaco-editor: 0.54.0
       yjs: 13.6.27
 
-  y-protocols@1.0.6(yjs@13.6.27):
+  y-protocols@1.0.7(yjs@13.6.27):
     dependencies:
       lib0: 0.2.114
       yjs: 13.6.27
@@ -9860,7 +9897,7 @@ snapshots:
     dependencies:
       lib0: 0.2.114
       simple-peer: 9.11.1
-      y-protocols: 1.0.6(yjs@13.6.27)
+      y-protocols: 1.0.7(yjs@13.6.27)
       yjs: 13.6.27
     optionalDependencies:
       ws: 8.18.3
@@ -9872,7 +9909,7 @@ snapshots:
   y-websocket@3.0.0(yjs@13.6.27):
     dependencies:
       lib0: 0.2.114
-      y-protocols: 1.0.6(yjs@13.6.27)
+      y-protocols: 1.0.7(yjs@13.6.27)
       yjs: 13.6.27
 
   yallist@5.0.0: {}

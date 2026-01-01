@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import Toolbar from '@/app/components/Toolbar';
@@ -12,9 +12,20 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@
 import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing';
 import LiveCursor from '@/app/components/LiveCursor';
 import RolesModal from '@/app/components/RolesModal';
-import type { AwarenessRole } from '@/app/interfaces/awareness';
+import type { AwarenessRole, AwarenessState } from '@/app/interfaces/awareness';
 
 type Props = { roomId: string };
+
+type AwarenessEntry = [number, AwarenessState];
+
+type ProviderWithSyncedEvents = {
+  on: (event: 'synced', cb: (isSynced: boolean) => void) => void;
+  off?: (event: 'synced', cb: (isSynced: boolean) => void) => void;
+};
+
+function isNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((n) => typeof n === 'number');
+}
 
 // simple helper
 function randColor() {
@@ -26,9 +37,9 @@ export default function EditorClient({ roomId }: Props) {
   const ydocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const rolesMapRef = useRef<Y.Map<AwarenessRole> | null>(null);
-  const roomMapRef = useRef<Y.Map<any> | null>(null);
-  const panelsMapRef = useRef<Y.Map<any> | null>(null);
-  const [userStates, setUserStates] = useState<any[]>([]);
+  const roomMapRef = useRef<Y.Map<unknown> | null>(null);
+  const panelsMapRef = useRef<Y.Map<unknown> | null>(null);
+  const [userStates, setUserStates] = useState<AwarenessEntry[]>([]);
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT);
   const [following, setFollowing] = useState<string | null>(null);
   const [rolesOpen, setRolesOpen] = useState(false);
@@ -68,7 +79,7 @@ export default function EditorClient({ roomId }: Props) {
     };
 
     const updateUsers = () => {
-      const states = Array.from(provider.awareness.getStates().entries());
+      const states = Array.from(provider.awareness.getStates().entries()) as AwarenessEntry[];
       setUserStates(states);
     };
 
@@ -84,7 +95,7 @@ export default function EditorClient({ roomId }: Props) {
     rolesMapRef.current = rolesMap;
 
     // Determine and persist room owner (first starter becomes owner)
-    const roomMap = ydoc.getMap<any>('room');
+    const roomMap = ydoc.getMap<unknown>('room');
     roomMapRef.current = roomMap;
     const currentId = provider.awareness.clientID;
     // Wait for initial sync before electing or reading owner
@@ -100,9 +111,10 @@ export default function EditorClient({ roomId }: Props) {
       setIsOwner(owner === currentId);
     };
     // y-websocket emits 'synced' when initial doc sync completes
-    (provider as any).on('synced', syncedHandler);
+    const providerEvents = provider as unknown as ProviderWithSyncedEvents;
+    providerEvents.on('synced', syncedHandler);
     // keep owner state in sync if room owner changes
-    const roomObserver = (events: any) => {
+    const roomObserver = () => {
       const owner = roomMap.get('owner');
       setOwnerId(typeof owner === 'number' ? owner : null);
       setIsOwner(owner === currentId);
@@ -110,27 +122,29 @@ export default function EditorClient({ roomId }: Props) {
     roomMap.observe(roomObserver);
 
     // panels shared map for syncing layout across participants
-    const panelsMap = ydoc.getMap<any>('panels');
+    const panelsMap = ydoc.getMap<unknown>('panels');
     panelsMapRef.current = panelsMap;
 
     const ensurePanelDefaults = () => {
       // Initialize defaults if not present
-      const hasH = Array.isArray(panelsMap.get('h'));
-      const hasV = Array.isArray(panelsMap.get('v'));
+      const hasH = isNumberArray(panelsMap.get('h'));
+      const hasV = isNumberArray(panelsMap.get('v'));
       const defaultH = [50, 50];
       const defaultV = [80, 20];
       if (!hasH) panelsMap.set('h', defaultH);
       if (!hasV) panelsMap.set('v', defaultV);
       // Also seed local state so UI renders with values
-      setHLayout(panelsMap.get('h') ?? defaultH);
-      setVLayout(panelsMap.get('v') ?? defaultV);
+      const h = panelsMap.get('h');
+      const v = panelsMap.get('v');
+      setHLayout(isNumberArray(h) ? h : defaultH);
+      setVLayout(isNumberArray(v) ? v : defaultV);
     };
 
     const panelsObserver = () => {
       const h = panelsMap.get('h');
       const v = panelsMap.get('v');
-      if (Array.isArray(h)) setHLayout(h.slice());
-      if (Array.isArray(v)) setVLayout(v.slice());
+      if (isNumberArray(h)) setHLayout(h.slice());
+      if (isNumberArray(v)) setVLayout(v.slice());
     };
     panelsMap.observe(panelsObserver);
 
@@ -139,7 +153,7 @@ export default function EditorClient({ roomId }: Props) {
       if (!isSynced) return;
       ensurePanelDefaults();
     };
-    (provider as any).on('synced', panelsSyncedHandler);
+    providerEvents.on('synced', panelsSyncedHandler);
 
     // keep my role in sync
     const rolesObserver = () => {
@@ -171,8 +185,8 @@ export default function EditorClient({ roomId }: Props) {
       panelsMapRef.current?.unobserve(panelsObserver);
       rolesMapRef.current?.unobserve(rolesObserver);
       try {
-        (provider as any).off?.('synced', syncedHandler);
-        (provider as any).off?.('synced', panelsSyncedHandler);
+        providerEvents.off?.('synced', syncedHandler);
+        providerEvents.off?.('synced', panelsSyncedHandler);
       } catch {}
       provider.destroy();
       ydoc.destroy();
@@ -250,6 +264,7 @@ export default function EditorClient({ roomId }: Props) {
 
   // Proactive ownership handoff on tab close and destroy when last user leaves
   useEffect(() => {
+    const pagehideOptions: AddEventListenerOptions = { capture: true };
     const handleOwnerExit = () => {
       const provider = providerRef.current;
       const rolesMap = rolesMapRef.current;
@@ -275,13 +290,13 @@ export default function EditorClient({ roomId }: Props) {
         try {
           roomMap.set('destroyed', true);
           if (rolesMap) {
-            for (const k of Array.from((rolesMap as any).keys?.() ?? [])) {
-              rolesMap.delete(String(k));
+            for (const k of Array.from(rolesMap.keys())) {
+              rolesMap.delete(k);
             }
           }
           if (panelsMap) {
-            for (const k of Array.from((panelsMap as any).keys?.() ?? [])) {
-              panelsMap.delete(String(k));
+            for (const k of Array.from(panelsMap.keys())) {
+              panelsMap.delete(k);
             }
           }
         } catch {}
@@ -289,10 +304,10 @@ export default function EditorClient({ roomId }: Props) {
     };
 
     // Use both pagehide and beforeunload for broader browser coverage
-    window.addEventListener('pagehide', handleOwnerExit, { capture: true });
+    window.addEventListener('pagehide', handleOwnerExit, pagehideOptions);
     window.addEventListener('beforeunload', handleOwnerExit);
     return () => {
-      window.removeEventListener('pagehide', handleOwnerExit, { capture: true } as any);
+      window.removeEventListener('pagehide', handleOwnerExit, pagehideOptions);
       window.removeEventListener('beforeunload', handleOwnerExit);
     };
   }, [isOwner]);
@@ -332,7 +347,7 @@ export default function EditorClient({ roomId }: Props) {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     if (editorRef.current) {
       const fileExtension = languageExtensions[language] || '.txt';
       const content = editorRef.current.getValue();
@@ -346,16 +361,9 @@ export default function EditorClient({ roomId }: Props) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
-  };
+  }, [language, roomId]);
 
-  const handleImportClick = () => {
-    const input = document.getElementById('file-importer');
-    if (input) {
-      input.click();
-    }
-  };
-
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && editorRef.current) {
       const reader = new FileReader();
@@ -365,7 +373,7 @@ export default function EditorClient({ roomId }: Props) {
       };
       reader.readAsText(file);
     }
-  };
+  }, [editorRef]);
 
   // Run code on the server and show output
   const [runOutput, setRunOutput] = useState<string | null>(null);
@@ -388,8 +396,9 @@ export default function EditorClient({ roomId }: Props) {
       if (json.stderr) out.push('\n--- STDERR ---\n' + json.stderr);
       out.push(`\n(exit: ${json.exitCode ?? 'unknown'}${json.timedOut ? ', timed out' : ''})`);
       setRunOutput(out.join('\n'))
-    } catch (err: any) {
-      setRunOutput(String(err?.message ?? err))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      setRunOutput(message)
     } finally {
       setRunning(false)
     }
@@ -408,7 +417,7 @@ export default function EditorClient({ roomId }: Props) {
       window.removeEventListener('toolbar:export', handleExportEvent);
       fileInput?.removeEventListener('change', handleImportChange);
     }
-  }, [language, following]);
+  }, [handleExport, handleFileImport]);
 
   // Apply incoming layout updates to PanelGroups
   useEffect(() => {
@@ -443,14 +452,14 @@ export default function EditorClient({ roomId }: Props) {
       {userStates
         .filter(([clientId]) => clientId !== providerRef.current?.awareness.clientID)
         .map(([clientId, state]) => {
-        if (state.cursor && state.user) {
+        if (state.cursor) {
           return (
             <LiveCursor
               key={clientId}
               x={state.cursor.x}
               y={state.cursor.y}
-              color={state.user.color}
-              name={state.user.name}
+              color={state.user?.color ?? '#888'}
+              name={state.user?.name ?? `User ${clientId}`}
             />
           );
         }
@@ -529,14 +538,15 @@ export default function EditorClient({ roomId }: Props) {
                         selectedKeys={[language]}
                         selectionMode="single"
                         variant="flat"
+                        items={languageOptions}
                         onSelectionChange={(keys) => {
                           const selected = Array.from(keys)[0] as Languages;
                           setLanguage(selected);
                         }}
                       >
-                        {(languageOptions.map((option) => (
+                        {(option) => (
                           <DropdownItem key={option.value}>{option.label}</DropdownItem>
-                        )) as unknown as any)}
+                        )}
                       </DropdownMenu>
                     </Dropdown>
                   </div>

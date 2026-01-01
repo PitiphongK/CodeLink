@@ -19,7 +19,7 @@ export const provider = new WebsocketProvider(
 export const awareness = provider.awareness;
 
 // Get a shared array of our line maps
-export const yLines: Y.Array<Y.Map<any>> = doc.getArray(`lines`);
+export const yLines: Y.Array<Y.Map<unknown>> = doc.getArray(`lines`);
 
 // Create an undo manager for the line maps
 export const undoManager = new Y.UndoManager(yLines);

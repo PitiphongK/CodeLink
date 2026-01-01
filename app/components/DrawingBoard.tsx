@@ -2,6 +2,7 @@
 import { Stage, Layer, Line } from "react-konva";
 import { useState, useRef, useEffect } from "react";
 import * as Y from "yjs";
+import type { KonvaEventObject } from "konva/lib/Node";
 
 interface ILine {
   points: number[];
@@ -30,20 +31,22 @@ const DrawingBoard = ({ ydoc, tool }: { ydoc: Y.Doc | null, tool: "pen" | "erase
     };
   }, [yLines]);
 
-  const handleMouseDown = (e: any) => {
+  const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     isDrawing.current = true;
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = e.target.getStage()?.getPointerPosition();
+    if (!pos) return;
     if (yLines) {
       yLines.push([{ points: [pos.x, pos.y], tool }]);
     }
   };
 
-  const handleMouseMove = (e: any) => {
+  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
     if (!isDrawing.current) {
       return;
     }
     const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
+    const point = stage?.getPointerPosition();
+    if (!point) return;
 
     if (yLines) {
       const lastLine = yLines.get(yLines.length - 1);

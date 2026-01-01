@@ -2,13 +2,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import * as Y from "yjs";
+import type { KonvaEventObject } from "konva/lib/Node";
 
-interface ILine {
-  id: string;
-  points: number[]; // flat [x,y,x,y,...]
-  color: string;
-  isComplete: boolean;
-}
+type OverlayLine = {
+  points: number[];
+  tool: "pen";
+  color?: string;
+};
 
 /**
  * Overlay drawing component that can be toggled on top of the IDE/editor area.
@@ -17,13 +17,13 @@ interface ILine {
  * - Pen color defaults to white so it's visible over dark editor themes.
  */
 export default function EditorOverlayDrawing({ ydoc, active, tool }: { ydoc?: Y.Doc | null, active: boolean, tool: "pen" | "eraser" }) {
-  const [lines, setLines] = useState<any[]>([]);
+  const [lines, setLines] = useState<OverlayLine[]>([]);
   const isDrawing = useRef(false);
   const currentIdx = useRef<number | null>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 800, h: 600 });
 
   // Use a separate Yjs array for the editor overlay so it doesn't sync with the sidebar DrawingBoard
-  const yLines = ydoc?.getArray<any>("overlayDrawing");
+  const yLines = ydoc?.getArray<OverlayLine>("overlayDrawing");
 
   useEffect(() => {
     if (!yLines) return;
@@ -72,10 +72,10 @@ export default function EditorOverlayDrawing({ ydoc, active, tool }: { ydoc?: Y.
   };
 
   // Konva pointer handlers
-  const handleMouseDown = (e: any) => {
+  const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     if (!active) return;
     const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
+    const pos = stage?.getPointerPosition();
     if (!pos) return;
     if (tool === "pen") {
       start(pos);
@@ -83,16 +83,16 @@ export default function EditorOverlayDrawing({ ydoc, active, tool }: { ydoc?: Y.
     // for eraser, we'll rely on the per-line onClick handler to delete the Yjs entry by index
   };
 
-  const handleMouseMove = (e: any) => {
+  const handleMouseMove = (e: KonvaEventObject<MouseEvent>) => {
     if (!active) return;
     if (!isDrawing.current) return;
     const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
+    const pos = stage?.getPointerPosition();
     if (!pos) return;
     addPoint(pos);
   };
 
-  const handleMouseUp = (e: any) => {
+  const handleMouseUp = () => {
     if (!active) return;
     end();
   };
