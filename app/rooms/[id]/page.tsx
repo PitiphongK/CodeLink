@@ -1,34 +1,30 @@
-'use client';
-import dynamic from 'next/dynamic';
-import { use } from 'react';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
+import { getRedis } from '@/app/lib/redis';
 import { isValidRoomCode } from '@/app/utils/roomCode';
+import RoomPageClient from './RoomPageClient';
 
-const EditorClient = dynamic(() => import('./EditorClient'), { ssr: false });
+export const runtime = 'nodejs';
 
-export default function RoomPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
+function roomKey(id: string) {
+  return `room:${id}`;
+}
 
-  useEffect(() => {
-    // Validate room code format and redirect if invalid
-    if (!isValidRoomCode(id)) {
-      router.replace(`/?error=invalid-room-code`);
-      return;
-    }
-    try {
-      const storedName = sessionStorage.getItem('userName');
-      if (!storedName) {
-        router.replace(`/?join=${encodeURIComponent(id)}`);
-      }
-    } catch {
-      // sessionStorage not available (shouldn't happen in client); ignore
-    }
-  }, [id, router]);
-  return (
-    <main className="flex flex-col h-screen overflow-hidden">
-      <EditorClient roomId={id} />
-    </main>
-  );
+export default async function RoomPage({ params }: { params: { id: string } }) {
+  const id = params.id?.trim();
+  if (!id) notFound();
+
+  // Keep this consistent with the existing client-side validation.
+  if (!isValidRoomCode(id)) {
+    redirect('/?error=invalid-room-code');
+  }
+
+  const redis = await getRedis();
+  const raw = await redis.get(roomKey(id));
+
+  // Room doesn't exist -> redirect before rendering UI
+  if (!raw) {
+    redirect('/?error=room-not-found');
+  }
+
+  return <RoomPageClient id={id} />;
 }

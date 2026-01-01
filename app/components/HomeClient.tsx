@@ -1,12 +1,47 @@
 "use client";
 
 import { Button, Input, Spinner, Form } from "@heroui/react";
+import { addToast } from "@heroui/toast";
 import { ThemeSwitcher } from "./theme-switcher";
 import { useRoomLanding } from "@/app/hooks/useRoomLanding";
 import type { RoomEntryStep } from "@/app/interfaces/types";
 import { normalizeRoomCode } from "@/app/utils/roomCode";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function HomeClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const error = searchParams?.get("error");
+    if (!error) return;
+
+    if (error === "room-not-found") {
+      addToast({
+        title: "Room not found",
+        description: "This room doesn’t exist (or was deleted).",
+        color: "danger",
+        variant: "solid",
+        timeout: 4000,
+      });
+    } else if (error === "invalid-room-code") {
+      addToast({
+        title: "Invalid room code",
+        description: "Please check the code and try again.",
+        color: "danger",
+        variant: "solid",
+        timeout: 4000,
+      });
+    }
+
+    // Remove the error param so refresh/back doesn't re-toast.
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("error");
+    const nextQuery = next.toString();
+    router.replace(nextQuery ? `/?${nextQuery}` : "/");
+  }, [router, searchParams]);
+
   const {
     joinRoomId,
     setJoinRoomId,
@@ -39,7 +74,13 @@ export default function HomeClient() {
             }
             if (await isExistingRoom(normalized)) setStep("join-name" as RoomEntryStep);
             else {
-              alert("Room not found.");
+              addToast({
+                title: "Room not found",
+                description: "Check the code or ask the host to create it first.",
+                color: "danger",
+                variant: "solid",
+                timeout: 4000,
+              });
               console.warn("Room not found:", normalized);
             }
           }}

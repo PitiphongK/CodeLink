@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { generateRoomCode, normalizeRoomCode } from '@/app/utils/roomCode';
 import type { RoomEntryStep } from '@/app/interfaces/types';
+import { addToast } from '@heroui/toast';
 
 export function useRoomLanding() {
   const [joinRoomId, setJoinRoomId] = useState('');
@@ -32,12 +33,24 @@ export function useRoomLanding() {
     const name = userName.trim();
     const normalized = normalizeRoomCode(joinRoomId);
     if (!name) {
-      alert('Please enter your name.');
+      addToast({
+        title: 'Name required',
+        description: 'Please enter your name to join the room.',
+        color: 'warning',
+        variant: 'solid',
+        timeout: 4000,
+      });
       setIsSubmitting(false);
       return;
     }
     if (!normalized) {
-      alert('Invalid room code. Please use format XXX-XXX-XXX.');
+      addToast({
+        title: 'Invalid room code',
+        description: 'Please use format XXX-XXX-XXX.',
+        color: 'danger',
+        variant: 'solid',
+        timeout: 4000,
+      });
       setIsSubmitting(false);
       return;
     }
@@ -50,7 +63,13 @@ export function useRoomLanding() {
     setIsSubmitting(true);
     const name = userName.trim();
     if (!name) {
-      alert('Please enter your name.');
+      addToast({
+        title: 'Name required',
+        description: 'Please enter your name to create a room.',
+        color: 'warning',
+        variant: 'solid',
+        timeout: 4000,
+      });
       setIsSubmitting(false);
       return;
     }
@@ -66,7 +85,13 @@ export function useRoomLanding() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        alert(errorData.error || 'Failed to create room. Please try again.');
+        addToast({
+          title: 'Failed to create room',
+          description: errorData.error || 'Please try again.',
+          color: 'danger',
+          variant: 'solid',
+          timeout: 5000,
+        });
         setIsSubmitting(false);
         return;
       }
@@ -75,7 +100,13 @@ export function useRoomLanding() {
       router.push(`/rooms/${newRoomCode}`);
     } catch (error) {
       console.error('Error creating room:', error);
-      alert('Network error. Please try again.');
+      addToast({
+        title: 'Network error',
+        description: 'Please try again.',
+        color: 'danger',
+        variant: 'solid',
+        timeout: 5000,
+      });
       setIsSubmitting(false);
     }
   };

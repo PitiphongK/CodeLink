@@ -16,6 +16,7 @@
     "@heroui/react": "^2.8.5",
     "@heroui/system": "^2.4.23",
     "@heroui/theme": "^2.4.23",
+    "@heroui/toast": "2.0.17",
     "@liveblocks/client": "^3.9.0",
     "@liveblocks/react": "^3.9.0",
     "@monaco-editor/react": "^4.7.0",

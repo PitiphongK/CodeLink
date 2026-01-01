@@ -13,6 +13,7 @@ import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing';
 import LiveCursor from '@/app/components/LiveCursor';
 import RolesModal from '@/app/components/RolesModal';
 import type { AwarenessRole, AwarenessState } from '@/app/interfaces/awareness';
+import { addToast } from '@heroui/toast';
 
 type Props = { roomId: string };
 
@@ -340,10 +341,22 @@ export default function EditorClient({ roomId }: Props) {
   const handleInvite = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
-      alert('Invite link copied to clipboard!');
+      addToast({
+        title: 'Invite link copied',
+        description: 'Share it with your teammate to join.',
+        color: 'success',
+        variant: 'solid',
+        timeout: 3000,
+      });
     }, (err) => {
       console.error('Could not copy text: ', err);
-      alert('Failed to copy invite link.');
+      addToast({
+        title: 'Copy failed',
+        description: 'Could not copy invite link to clipboard.',
+        color: 'danger',
+        variant: 'solid',
+        timeout: 4000,
+      });
     });
   };
 
