@@ -1,9 +1,24 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { generateRoomCode, normalizeRoomCode } from '@/app/utils/roomCode';
+import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/roomCode';
 import type { RoomEntryStep } from '@/app/interfaces/types';
 import { addToast } from '@heroui/toast';
+import { generateRandomUserName } from '@/app/utils/randomName';
+
+function readErrorMessage(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const error = (value as { error?: unknown }).error;
+  return typeof error === 'string' ? error : null;
+}
+
+function readRoomId(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null;
+  const room = (value as { room?: unknown }).room;
+  if (!room || typeof room !== 'object') return null;
+  const id = (room as { id?: unknown }).id;
+  return typeof id === 'string' && id ? id : null;
+}
 
 export function useRoomLanding() {
   const [joinRoomId, setJoinRoomId] = useState('');
@@ -18,10 +33,12 @@ export function useRoomLanding() {
     const storedUserName = sessionStorage.getItem('userName');
     if (storedUserName) {
       setUserName(storedUserName);
+    } else {
+      setUserName(generateRandomUserName());
     }
     const joinId = searchParams?.get('join');
     if (joinId) {
-      setJoinRoomId(joinId);
+      setJoinRoomId(formatRoomCodeInput(joinId));
       if (!storedUserName) {
         setStep('join-name');
       }
@@ -84,10 +101,10 @@ export function useRoomLanding() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({} as any));
+        const errorData: unknown = await response.json().catch(() => null);
         addToast({
           title: 'Failed to create room',
-          description: errorData?.error || 'Please try again.',
+          description: readErrorMessage(errorData) || 'Please try again.',
           color: 'danger',
           variant: 'solid',
           timeout: 5000,
@@ -96,9 +113,9 @@ export function useRoomLanding() {
         return;
       }
 
-      const data = await response.json().catch(() => ({} as any));
-      const roomId = data?.room?.id;
-      if (typeof roomId !== 'string' || !roomId) {
+      const data: unknown = await response.json().catch(() => null);
+      const roomId = readRoomId(data);
+      if (!roomId) {
         addToast({
           title: 'Failed to create room',
           description: 'Server returned an invalid room code. Please try again.',

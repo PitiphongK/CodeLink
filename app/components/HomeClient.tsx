@@ -5,9 +5,10 @@ import { addToast } from "@heroui/toast";
 import { ThemeSwitcher } from "./theme-switcher";
 import { useRoomLanding } from "@/app/hooks/useRoomLanding";
 import type { RoomEntryStep } from "@/app/interfaces/types";
-import { normalizeRoomCode } from "@/app/utils/roomCode";
+import { formatRoomCodeInput, normalizeRoomCode } from "@/app/utils/roomCode";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { generateRandomUserName } from "@/app/utils/randomName";
 
 export default function HomeClient() {
   const router = useRouter();
@@ -88,12 +89,12 @@ export default function HomeClient() {
           <Input
             isRequired
             errorMessage="Please enter a valid room code."
-            placeholder="abe-123-xyz"
+            placeholder="abc-def-ghi"
             size="lg"
             type="text"
             className="mb-4 w-full"
             value={joinRoomId}
-            onChange={(e) => setJoinRoomId(e.target.value)}
+            onChange={(e) => setJoinRoomId(formatRoomCodeInput(e.target.value))}
           />
           <Button color="primary" type="submit" disabled={isSubmitting || !joinRoomId.trim()}>
             {isSubmitting ? <Spinner color="default" variant="simple" size="sm" /> : "Join"}
@@ -108,7 +109,13 @@ export default function HomeClient() {
         <p className="text-sm font-medium mb-5 text-gray-500">
           Start a new pair programming session.
         </p>
-        <Button color="primary" onPress={() => setStep("create-name")}>
+        <Button
+          color="primary"
+          onPress={() => {
+            if (!userName.trim()) setUserName(generateRandomUserName());
+            setStep("create-name");
+          }}
+        >
           Create
         </Button>
       </div>

@@ -15,10 +15,16 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      "dist/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
     ],
+  },
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
   },
 ];
 

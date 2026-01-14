@@ -18,7 +18,7 @@ type Props = {
 
   export default function RolesModal({ isOpen, onClose, isOwner, users, getRole, onSetRole, currentOwnerId, onTransferOwner }: Props) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} backdrop="blur">
+    <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         {() => (
           <>

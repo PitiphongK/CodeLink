@@ -1,12 +1,15 @@
-import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import { TerminalManager } from './terminal';
 
-const app = express();
-const server = http.createServer(app);
+const PORT = process.env.PORT || 4000;
+
+const server = http.createServer();
 const io = new Server(server, {
-  cors: { origin: ['http://localhost:3000'], credentials: true }
+  cors: {
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+    credentials: true,
+  },
 });
 
 const terminalManager = new TerminalManager(io);
@@ -57,4 +60,4 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(4000, () => console.log('Socket.IO on :4000'));
+server.listen(PORT, () => console.log(`Socket.IO Terminal Server on :${PORT}`));

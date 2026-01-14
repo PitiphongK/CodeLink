@@ -7,6 +7,22 @@ export function generateRoomCode(): string {
   return `${pick3()}-${pick3()}-${pick3()}`;
 }
 
+// Format room code as the user types.
+// - Keeps only letters a–z
+// - Lowercases
+// - Inserts dashes after 3 and 6 letters
+// - Limits to 9 letters total
+export function formatRoomCodeInput(input: string): string {
+  const onlyLetters = (input || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 9);
+  const a = onlyLetters.slice(0, 3);
+  const b = onlyLetters.slice(3, 6);
+  const c = onlyLetters.slice(6, 9);
+
+  if (onlyLetters.length <= 3) return a;
+  if (onlyLetters.length <= 6) return `${a}-${b}`;
+  return `${a}-${b}-${c}`;
+}
+
 // Normalize arbitrary user input to strict format.
 // - Removes non-letters
 // - Uppercases

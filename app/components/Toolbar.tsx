@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
-import { Link2, Play, Navigation, Settings, Pen, Eraser, PenOff } from "lucide-react";
+import { Link2, Play, Navigation, Settings, Pen, Eraser, PenOff, PieChart } from "lucide-react";
 
 import type { AwarenessState } from "@/app/interfaces/awareness";
 
@@ -15,6 +15,10 @@ interface Props {
   following: string | null;
   followingName?: string | null;
   onManageRoles?: () => void;
+  onOpenSettings?: () => void;
+  onOpenAnalytics?: () => void;
+  onEndSession?: () => void;
+  onLeaveSession?: () => void;
   isOwner?: boolean;
   drawingTool?: "pen" | "eraser";
   onChangeDrawingTool?: (tool: "pen" | "eraser") => void;
@@ -22,7 +26,7 @@ interface Props {
   onToggleOverlay?: () => void;
 }
 
-export default function Toolbar({ onRun, running, onInvite, onImport, onExport, onManageRoles, drawingTool, onChangeDrawingTool, overlayActive, onToggleOverlay }: Props) {
+export default function Toolbar({ onRun, running, onInvite, onImport, onExport, onManageRoles, onOpenSettings, onOpenAnalytics, onEndSession, onLeaveSession, isOwner, drawingTool, onChangeDrawingTool, overlayActive, onToggleOverlay }: Props) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {
       onImport(e);
@@ -86,9 +90,27 @@ export default function Toolbar({ onRun, running, onInvite, onImport, onExport, 
         <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onManageRoles}>
           <Navigation size={16} />
         </Button>
-        <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
+        <Button
+          isIconOnly
+          className="bg-[#2c2c2c] hover:bg-[#4f4f4f]"
+          size="sm"
+          onPress={onOpenAnalytics}
+          aria-label="Open analytics"
+        >
+          <PieChart size={16} />
+        </Button>
+        <Button isIconOnly className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onOpenSettings}>
           <Settings fill="black" size={18} />
         </Button>
+        {isOwner ? (
+          <Button color="danger" size="sm" onPress={onEndSession}>
+            <span className="text-sm">End session</span>
+          </Button>
+        ) : (
+          <Button className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm" onPress={onLeaveSession}>
+            <span className="text-sm">Leave</span>
+          </Button>
+        )}
       </div>
       </div>
 

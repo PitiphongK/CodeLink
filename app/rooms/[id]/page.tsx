@@ -9,8 +9,9 @@ function roomKey(id: string) {
   return `room:${id}`;
 }
 
-export default async function RoomPage({ params }: { params: { id: string } }) {
-  const id = params.id?.trim();
+export default async function RoomPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;
+  const id = rawId?.trim();
   if (!id) notFound();
 
   // Keep this consistent with the existing client-side validation.
