@@ -17,6 +17,7 @@ import EndSessionConfirmModal from '@/app/components/EndSessionConfirmModal';
 import SessionSummaryModal from '@/app/components/SessionSummaryModal';
 import SessionEndedModal from '@/app/components/SessionEndedModal';
 import RoleNoticeModal from '@/app/components/RoleNoticeModal';
+import GitHubImportModal from '@/app/components/GitHubImportModal';
 import SharedTerminal, { type SharedTerminalHandle } from '@/app/components/SharedTerminal';
 import type { AwarenessRole, AwarenessState } from '@/app/interfaces/awareness';
 import { addToast } from '@heroui/toast';
@@ -96,8 +97,13 @@ export default function EditorClient({ roomId }: Props) {
   const [vLayout, setVLayout] = useState<number[] | null>(null);
   const hGroupRef = useRef<ImperativePanelGroupHandle | null>(null);
   const vGroupRef = useRef<ImperativePanelGroupHandle | null>(null);
+  const layoutDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [roomReady, setRoomReady] = useState(false);
   const [sessionEndedOpen, setSessionEndedOpen] = useState(false);
+  const [githubImportOpen, setGithubImportOpen] = useState(false);
+
+  // Memoize the awareness update function to prevent infinite loops
+  const updateUsersRef = useRef<() => void>();
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {
@@ -122,11 +128,12 @@ export default function EditorClient({ roomId }: Props) {
         provider.awareness.setLocalStateField('scroll', { top: scrollTop });
       }
     };
-
     const updateUsers = () => {
       const states = Array.from(provider.awareness.getStates().entries()) as AwarenessEntry[];
       setUserStates(states);
     };
+    
+    updateUsersRef.current = updateUsers;
 
     provider.awareness.on('change', updateUsers);
     updateUsers(); // Initial update
@@ -244,7 +251,7 @@ export default function EditorClient({ roomId }: Props) {
         // This is tricky because the editor instance might be gone.
         // A more robust solution would involve a cleanup function from the editor component itself.
       }
-      provider.awareness.off('change', updateUsers);
+      provider.awareness.off('change', updateUsersRef.current || updateUsers);
       roomMapRef.current?.unobserve(roomObserver);
       panelsMapRef.current?.unobserve(panelsObserver);
       rolesMapRef.current?.unobserve(rolesObserver);
@@ -262,6 +269,7 @@ export default function EditorClient({ roomId }: Props) {
       roleSinceRef.current = null;
       roleTotalsRef.current = { driver: 0, navigator: 0, none: 0 };
       analyticsMapRef.current = null;
+      updateUsersRef.current = undefined;
       setRoomReady(false);
       setProviderSynced(false);
       ownerInitRef.current = false;
@@ -531,7 +539,7 @@ export default function EditorClient({ roomId }: Props) {
     }
 
     lastOwnerIdRef.current = currentOwner;
-  }, [ownerId, providerSynced, userStates]);
+  }, [ownerId, providerSynced]);
 
   // Ensure an owner exists; if missing or left, pick a random present user.
   useEffect(() => {
@@ -564,7 +572,7 @@ export default function EditorClient({ roomId }: Props) {
         roomMap.set('destroyed', true);
       }
     }
-  }, [providerSynced, userStates, ownerId]);
+  }, [providerSynced]);
 
   // Proactive ownership handoff on tab close and destroy when last user leaves
   useEffect(() => {
@@ -782,6 +790,46 @@ export default function EditorClient({ roomId }: Props) {
     }
   }, [editorRef]);
 
+  const handleGitHubImport = useCallback(async (repoUrl: string, filePath?: string) => {
+    try {
+      const response = await fetch('/api/github/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl, filePath }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to import from GitHub');
+      }
+
+      const data = await response.json();
+
+      if (data.type === 'file' && editorRef.current) {
+        editorRef.current.setValue(data.content);
+        
+        addToast({
+          title: 'Import successful',
+          description: `Imported ${data.filename} from GitHub`,
+          color: 'success',
+          variant: 'solid',
+          timeout: 3000,
+        });
+      } else if (data.type === 'list') {
+        addToast({
+          title: 'Choose a file',
+          description: 'Please specify a file path in the repository',
+          color: 'warning',
+          variant: 'solid',
+          timeout: 4000,
+        });
+      }
+    } catch (error) {
+      console.error('GitHub import error:', error);
+      throw error;
+    }
+  }, []);
+
   // Run code on the server and show output
   const [running, setRunning] = useState(false);
   const terminalRef = useRef<SharedTerminalHandle | null>(null);
@@ -828,6 +876,33 @@ export default function EditorClient({ roomId }: Props) {
     }
   }, [vLayout]);
 
+  const handleHLayoutChange = useCallback((sizes: number[]) => {
+    setHLayout(sizes);
+    if (myRole === 'driver') {
+      if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current);
+      layoutDebounceRef.current = setTimeout(() => {
+        panelsMapRef.current?.set('h', sizes);
+      }, 300);
+    }
+  }, [myRole]);
+
+  const handleVLayoutChange = useCallback((sizes: number[]) => {
+    setVLayout(sizes);
+    if (myRole === 'driver') {
+      if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current);
+      layoutDebounceRef.current = setTimeout(() => {
+        panelsMapRef.current?.set('v', sizes);
+      }, 300);
+    }
+  }, [myRole]);
+
+  // Clean up debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <RoleNoticeModal
@@ -844,6 +919,11 @@ export default function EditorClient({ roomId }: Props) {
           }
           setRoleNoticeOpen(false);
         }}
+      />
+      <GitHubImportModal
+        isOpen={githubImportOpen}
+        onClose={() => setGithubImportOpen(false)}
+        onImport={handleGitHubImport}
       />
       <SessionEndedModal
         isOpen={sessionEndedOpen}
@@ -866,6 +946,7 @@ export default function EditorClient({ roomId }: Props) {
           if (!isOwner) return;
           roomMapRef.current?.set('owner', targetId);
         }}
+        onCopyLink={handleInvite}
       />
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <EndSessionConfirmModal
@@ -916,6 +997,7 @@ export default function EditorClient({ roomId }: Props) {
         onInvite={handleInvite}
         onImport={handleFileImport}
         onExport={handleExport}
+        onGitHubImport={() => setGithubImportOpen(true)}
         users={userStates.filter(([clientId]) => clientId !== providerRef.current?.awareness.clientID)}
         onFollow={setFollowing}
         following={following}
@@ -941,24 +1023,13 @@ export default function EditorClient({ roomId }: Props) {
         <PanelGroup
           ref={hGroupRef}
           direction="horizontal"
-          onLayout={(sizes) => {
-            // Only driver writes layout; others just observe
-            if (myRole === 'driver') {
-              panelsMapRef.current?.set('h', sizes);
-            }
-            setHLayout(sizes);
-          }}
+          onLayout={handleHLayoutChange}
         >
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
             <PanelGroup
               ref={vGroupRef}
               direction="vertical"
-              onLayout={(sizes) => {
-                if (myRole === 'driver') {
-                  panelsMapRef.current?.set('v', sizes);
-                }
-                setVLayout(sizes);
-              }}
+              onLayout={handleVLayoutChange}
             >
               <Panel>
                 <div className="flex-1 relative h-full">
