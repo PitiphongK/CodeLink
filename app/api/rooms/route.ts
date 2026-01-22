@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRedis } from '@/app/lib/redis';
+import { getRedis } from '@/app/lib/redis/client';
 import { generateRoomCode, isValidRoomCode } from '@/app/utils/roomCode';
 
 export const runtime = 'nodejs';

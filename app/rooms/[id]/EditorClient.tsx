@@ -11,13 +11,13 @@ import { useMonacoFollowScroll } from '@/app/hooks/useMonacoFollowScroll';
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Button } from "@heroui/react";
 import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing';
 import LiveCursor from '@/app/components/LiveCursor';
-import RolesModal from '@/app/components/RolesModal';
-import SettingsModal from '@/app/components/SettingsModal';
-import EndSessionConfirmModal from '@/app/components/EndSessionConfirmModal';
-import SessionSummaryModal from '@/app/components/SessionSummaryModal';
-import SessionEndedModal from '@/app/components/SessionEndedModal';
-import RoleNoticeModal from '@/app/components/RoleNoticeModal';
-import GitHubImportModal from '@/app/components/GitHubImportModal';
+import RolesModal from '@/app/components/modals/RolesModal';
+import SettingsModal from '@/app/components/modals/SettingsModal';
+import EndSessionConfirmModal from '@/app/components/modals/EndSessionConfirmModal';
+import SessionSummaryModal from '@/app/components/modals/SessionSummaryModal';
+import SessionEndedModal from '@/app/components/modals/SessionEndedModal';
+import RoleNoticeModal from '@/app/components/modals/RoleNoticeModal';
+import GitHubImportModal from '@/app/components/modals/GitHubImportModal';
 import SharedTerminal, { type SharedTerminalHandle } from '@/app/components/SharedTerminal';
 import type { AwarenessRole, AwarenessState } from '@/app/interfaces/awareness';
 import { addToast } from '@heroui/toast';
@@ -103,7 +103,7 @@ export default function EditorClient({ roomId }: Props) {
   const [githubImportOpen, setGithubImportOpen] = useState(false);
 
   // Memoize the awareness update function to prevent infinite loops
-  const updateUsersRef = useRef<() => void>();
+  const updateUsersRef = useRef<(() => void) | undefined>(undefined);
 
   // Create/destroy Yjs doc + provider when room changes
   useEffect(() => {

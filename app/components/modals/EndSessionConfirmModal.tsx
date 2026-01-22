@@ -26,7 +26,7 @@ export default function EndSessionConfirmModal({ isOpen, pending, onCancel, onCo
             <ModalHeader className="flex flex-col gap-1">End session?</ModalHeader>
             <ModalBody>
               <div className="text-sm text-gray-500">
-                This will close the room for everyone. You’ll see the session analytics next.
+                This will close the room for everyone. You'll see the session analytics next.
               </div>
             </ModalBody>
             <ModalFooter>

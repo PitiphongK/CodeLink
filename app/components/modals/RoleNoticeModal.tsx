@@ -74,7 +74,7 @@ export default function RoleNoticeModal({
                 onValueChange={onChangeDontShowAgain}
                 className="mt-2"
               >
-                Don’t show this again
+                Don't show this again
               </Checkbox>
             </ModalBody>
             <ModalFooter>

@@ -9,7 +9,7 @@ import {
   ModalFooter,
   Button,
 } from "@heroui/react";
-import { ThemeSwitcher } from "./theme-switcher";
+import { ThemeSwitcher } from "../theme-switcher";
 
 type Props = {
   isOpen: boolean;
