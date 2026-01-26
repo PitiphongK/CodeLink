@@ -34,7 +34,7 @@ function getFileIcon(filename: string, isDir: boolean) {
   
   const ext = filename.split('.').pop()?.toLowerCase() || '';
   
-  const iconMap: Record<string, JSX.Element> = {
+  const iconMap: Record<string, React.ReactElement> = {
     'js': <Code2 size={16} className="text-yellow-500" />,
     'jsx': <Code2 size={16} className="text-yellow-500" />,
     'ts': <Code2 size={16} className="text-blue-500" />,
