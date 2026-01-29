@@ -1,5 +1,5 @@
 'use client'
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useRef, useState } from 'react'
 
 import { nanoid } from 'nanoid'
 import { getStroke } from 'perfect-freehand'
@@ -16,18 +16,51 @@ interface DrawingBoardProps {
 }
 
 function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
+  const svgRef = useRef<SVGSVGElement>(null)
   const { points, startStroke, updateStroke, finishStroke } = useStroke()
   const { strokes, addStroke} = useStrokes(ydoc)
+
+  /*
+  Must convert cursor absolute coordinate to a shared svg coordinate before broadcast
+  other clients need to transform svg coor to their own cursor coor.
+  */
+  const mapScreenToSvgCoordinate = (x: number, y: number) => {
+    const svg = svgRef.current
+    if (!svg) return { x, y }
+
+    const point = svg.createSVGPoint()
+    point.x = x
+    point.y = y
+    const ctm = svg.getScreenCTM()
+    if (ctm) {
+      return (
+        point.matrixTransform(ctm.inverse())
+      )
+    }
+    return {x, y}
+  }
+  
+  const mapSvgCoordinateToScreen = (x: number, y: number) => {
+    const svg = svgRef.current
+    if (!svg) return { x, y }
+
+    const point = svg.createSVGPoint()
+    point.x = x
+    point.y = y
+    const ctm = svg.getScreenCTM()
+    if (ctm) {
+      return point.matrixTransform(ctm) // Note: NOT ctm.inverse()
+    }
+    return { x, y }
+  }
 
   // useCallback prevents unnecessary re-creating new handler functions so the memoize component dont get rerendered
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       e.currentTarget.setPointerCapture(e.pointerId)
-      // calculates relative coordinate
       const rect = e.currentTarget.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      startStroke(x, y, e.pressure)
+      const point = mapScreenToSvgCoordinate(e.clientX, e.clientY)
+      startStroke(point.x , point.y, e.pressure)
     },
     [startStroke] // includes any component scope props, states, variables, *function (in this case) used inside this function
   )
@@ -38,7 +71,8 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
-      updateStroke(x, y, e.pressure)
+      const point = mapScreenToSvgCoordinate(e.clientX, e.clientY)
+      updateStroke(point.x, point.y, e.pressure)
     },
     [updateStroke]
   )
@@ -69,6 +103,7 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
   const pathData = getSvgPathFromStroke(stroke)
   return (
     <svg
+      ref={svgRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
