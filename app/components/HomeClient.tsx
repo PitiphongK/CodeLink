@@ -1,47 +1,50 @@
-"use client";
+'use client'
 
-import { Button, Input, Spinner, Form } from "@heroui/react";
-import { addToast } from "@heroui/toast";
-import { ThemeSwitcher } from "./theme-switcher";
-import { useRoomLanding } from "@/app/hooks/useRoomLanding";
-import type { RoomEntryStep } from "@/app/interfaces/types";
-import { formatRoomCodeInput, normalizeRoomCode } from "@/app/utils/roomCode";
-import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { generateRandomUserName } from "@/app/utils/randomName";
+import { useEffect } from 'react'
+
+import { Button, Form, Input, Spinner } from '@heroui/react'
+import { addToast } from '@heroui/toast'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+import { useRoomLanding } from '@/app/hooks/useRoomLanding'
+import type { RoomEntryStep } from '@/app/interfaces/types'
+import { generateRandomUserName } from '@/app/utils/randomName'
+import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/roomCode'
+
+import { ThemeSwitcher } from './theme-switcher'
 
 export default function HomeClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    const error = searchParams?.get("error");
-    if (!error) return;
+    const error = searchParams?.get('error')
+    if (!error) return
 
-    if (error === "room-not-found") {
+    if (error === 'room-not-found') {
       addToast({
-        title: "Room not found",
-        description: "This room doesn’t exist (or was deleted).",
-        color: "danger",
-        variant: "solid",
+        title: 'Room not found',
+        description: 'This room doesn’t exist (or was deleted).',
+        color: 'danger',
+        variant: 'solid',
         timeout: 4000,
-      });
-    } else if (error === "invalid-room-code") {
+      })
+    } else if (error === 'invalid-room-code') {
       addToast({
-        title: "Invalid room code",
-        description: "Please check the code and try again.",
-        color: "danger",
-        variant: "solid",
+        title: 'Invalid room code',
+        description: 'Please check the code and try again.',
+        color: 'danger',
+        variant: 'solid',
         timeout: 4000,
-      });
+      })
     }
 
     // Remove the error param so refresh/back doesn't re-toast.
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete("error");
-    const nextQuery = next.toString();
-    router.replace(nextQuery ? `/?${nextQuery}` : "/");
-  }, [router, searchParams]);
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete('error')
+    const nextQuery = next.toString()
+    router.replace(nextQuery ? `/?${nextQuery}` : '/')
+  }, [router, searchParams])
 
   const {
     joinRoomId,
@@ -54,7 +57,7 @@ export default function HomeClient() {
     handleCreateRoom,
     isSubmitting,
     isExistingRoom,
-  } = useRoomLanding();
+  } = useRoomLanding()
 
   const renderInitial = () => (
     <>
@@ -67,22 +70,24 @@ export default function HomeClient() {
         <Form
           className="w-full"
           onSubmit={async (e) => {
-            e.preventDefault();
-            const normalized = normalizeRoomCode(joinRoomId);
+            e.preventDefault()
+            const normalized = normalizeRoomCode(joinRoomId)
             if (!normalized) {
-              console.warn("Invalid room code format:", joinRoomId);
-              return;
+              console.warn('Invalid room code format:', joinRoomId)
+              return
             }
-            if (await isExistingRoom(normalized)) setStep("join-name" as RoomEntryStep);
+            if (await isExistingRoom(normalized))
+              setStep('join-name' as RoomEntryStep)
             else {
               addToast({
-                title: "Room not found",
-                description: "Check the code or ask the host to create it first.",
-                color: "danger",
-                variant: "solid",
+                title: 'Room not found',
+                description:
+                  'Check the code or ask the host to create it first.',
+                color: 'danger',
+                variant: 'solid',
                 timeout: 4000,
-              });
-              console.warn("Room not found:", normalized);
+              })
+              console.warn('Room not found:', normalized)
             }
           }}
         >
@@ -96,8 +101,16 @@ export default function HomeClient() {
             value={joinRoomId}
             onChange={(e) => setJoinRoomId(formatRoomCodeInput(e.target.value))}
           />
-          <Button color="primary" type="submit" disabled={isSubmitting || !joinRoomId.trim()}>
-            {isSubmitting ? <Spinner color="default" variant="simple" size="sm" /> : "Join"}
+          <Button
+            color="primary"
+            type="submit"
+            disabled={isSubmitting || !joinRoomId.trim()}
+          >
+            {isSubmitting ? (
+              <Spinner color="default" variant="simple" size="sm" />
+            ) : (
+              'Join'
+            )}
           </Button>
         </Form>
       </div>
@@ -112,23 +125,23 @@ export default function HomeClient() {
         <Button
           color="primary"
           onPress={() => {
-            if (!userName.trim()) setUserName(generateRandomUserName());
-            setStep("create-name");
+            if (!userName.trim()) setUserName(generateRandomUserName())
+            setStep('create-name')
           }}
         >
           Create
         </Button>
       </div>
     </>
-  );
+  )
 
   const renderNameStep = (isJoining: boolean) => (
     <div className="flex flex-col items-start px-4 w-full max-w-sm">
       <form
         className="w-full"
         onSubmit={(e) => {
-          e.preventDefault();
-          (isJoining ? handleJoinRoom : handleCreateRoom)();
+          e.preventDefault()
+          ;(isJoining ? handleJoinRoom : handleCreateRoom)()
         }}
       >
         <h2 className="text-2xl font-semibold mb-1">What&apos;s your name?</h2>
@@ -153,14 +166,14 @@ export default function HomeClient() {
           {isSubmitting ? (
             <Spinner color="default" variant="simple" size="sm" />
           ) : isJoining ? (
-            "Enter Room"
+            'Enter Room'
           ) : (
-            "Create Room"
+            'Create Room'
           )}
         </Button>
       </form>
     </div>
-  );
+  )
 
   return (
     <main>
@@ -168,13 +181,13 @@ export default function HomeClient() {
         <div className="mb-20 text-2xl">CodeLink</div>
 
         <div className="flex items-start justify-center w-full max-w-4xl">
-          {step === "initial" && renderInitial()}
-          {step === "join-name" && renderNameStep(true)}
-          {step === "create-name" && renderNameStep(false)}
+          {step === 'initial' && renderInitial()}
+          {step === 'join-name' && renderNameStep(true)}
+          {step === 'create-name' && renderNameStep(false)}
         </div>
       </div>
 
       <ThemeSwitcher />
     </main>
-  );
+  )
 }

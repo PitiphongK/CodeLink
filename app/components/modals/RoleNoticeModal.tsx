@@ -1,30 +1,31 @@
-"use client";
+'use client'
 
-import React from "react";
+import React from 'react'
+
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
   Checkbox,
-} from "@heroui/react";
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from '@heroui/react'
 
-type Role = "driver" | "navigator";
+type Role = 'driver' | 'navigator'
 
 type Props = {
-  isOpen: boolean;
-  role: Role;
-  dontShowAgain: boolean;
-  onChangeDontShowAgain: (value: boolean) => void;
-  onOk: () => void;
-};
+  isOpen: boolean
+  role: Role
+  dontShowAgain: boolean
+  onChangeDontShowAgain: (value: boolean) => void
+  onOk: () => void
+}
 
 function getCopy(role: Role) {
-  if (role === "driver") {
+  if (role === 'driver') {
     return {
-      title: "You are the Driver",
+      title: 'You are the Driver',
       body: (
         <div className="space-y-2 text-sm text-gray-500">
           <div>You can edit the code.</div>
@@ -33,23 +34,21 @@ function getCopy(role: Role) {
           </div>
         </div>
       ),
-    };
+    }
   }
 
   return {
-    title: "You are the Navigator",
+    title: 'You are the Navigator',
     body: (
       <div className="space-y-2 text-sm text-gray-500">
         <div>You are in read-only mode (no editing).</div>
         <div>
           You will automatically follow the Driver so you can review and guide.
         </div>
-        <div>
-          You can ask the host to switch roles.
-        </div>
+        <div>You can ask the host to switch roles.</div>
       </div>
     ),
-  };
+  }
 }
 
 export default function RoleNoticeModal({
@@ -59,14 +58,21 @@ export default function RoleNoticeModal({
   onChangeDontShowAgain,
   onOk,
 }: Props) {
-  const copy = getCopy(role);
+  const copy = getCopy(role)
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} backdrop="blur" isDismissable={false}>
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {}}
+      backdrop="blur"
+      isDismissable={false}
+    >
       <ModalContent>
         {() => (
           <>
-            <ModalHeader className="flex flex-col gap-1">{copy.title}</ModalHeader>
+            <ModalHeader className="flex flex-col gap-1">
+              {copy.title}
+            </ModalHeader>
             <ModalBody>
               {copy.body}
               <Checkbox
@@ -86,5 +92,5 @@ export default function RoleNoticeModal({
         )}
       </ModalContent>
     </Modal>
-  );
+  )
 }

@@ -14,10 +14,10 @@ export const languageExtensions: { [key: string]: string } = {
   css: '.css',
   json: '.json',
   markdown: '.md',
-};
+}
 
 export const languageOptions: { label: string; value: Languages }[] = [
   { label: 'JavaScript', value: Languages.JAVASCRIPT },
   { label: 'TypeScript', value: Languages.TYPESCRIPT },
   { label: 'Python', value: Languages.PYTHON },
-];
+]

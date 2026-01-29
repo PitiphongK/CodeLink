@@ -12,7 +12,7 @@ export function generateRandomUserName(): string {
     'Gentle',
     'Nimble',
     'Lucky',
-  ] as const;
+  ] as const
 
   const animals = [
     'Otter',
@@ -27,24 +27,24 @@ export function generateRandomUserName(): string {
     'Turtle',
     'Badger',
     'Falcon',
-  ] as const;
+  ] as const
 
   const randInt = (maxExclusive: number) => {
-    if (maxExclusive <= 0) return 0;
+    if (maxExclusive <= 0) return 0
 
     // Prefer crypto for better randomness in the browser.
     try {
-      const buf = new Uint32Array(1);
-      crypto.getRandomValues(buf);
-      return buf[0] % maxExclusive;
+      const buf = new Uint32Array(1)
+      crypto.getRandomValues(buf)
+      return buf[0] % maxExclusive
     } catch {
-      return Math.floor(Math.random() * maxExclusive);
+      return Math.floor(Math.random() * maxExclusive)
     }
-  };
+  }
 
-  const adj = adjectives[randInt(adjectives.length)];
-  const animal = animals[randInt(animals.length)];
-  const suffix = (100 + randInt(900)).toString();
+  const adj = adjectives[randInt(adjectives.length)]
+  const animal = animals[randInt(animals.length)]
+  const suffix = (100 + randInt(900)).toString()
 
-  return `${adj}${animal}${suffix}`;
+  return `${adj}${animal}${suffix}`
 }

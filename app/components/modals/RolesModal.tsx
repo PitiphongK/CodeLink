@@ -1,41 +1,43 @@
-"use client";
-import React, { useState } from "react";
+'use client'
+import React, { useState } from 'react'
+
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
   Select,
   SelectItem,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
   Table,
-  TableHeader,
-  TableColumn,
   TableBody,
-  TableRow,
   TableCell,
-} from "@heroui/react";
-import { MoreVertical } from "lucide-react";
-import type { AwarenessState } from "@/app/interfaces/awareness";
+  TableColumn,
+  TableHeader,
+  TableRow,
+} from '@heroui/react'
+import { MoreVertical } from 'lucide-react'
 
-type Role = "driver" | "navigator" | "none";
+import type { AwarenessState } from '@/app/interfaces/awareness'
+
+type Role = 'driver' | 'navigator' | 'none'
 
 type Props = {
-  isOpen: boolean;
-  onClose: () => void;
-  isOwner: boolean;
-  users: Array<[number, AwarenessState]>;
-  getRole: (clientId: number) => Role;
-  onSetRole: (clientId: number, role: Role) => void;
-  currentOwnerId?: number | null;
-  onTransferOwner?: (clientId: number) => void;
-  onCopyLink?: () => void;
-};
+  isOpen: boolean
+  onClose: () => void
+  isOwner: boolean
+  users: Array<[number, AwarenessState]>
+  getRole: (clientId: number) => Role
+  onSetRole: (clientId: number, role: Role) => void
+  currentOwnerId?: number | null
+  onTransferOwner?: (clientId: number) => void
+  onCopyLink?: () => void
+}
 
 export default function RolesModal({
   isOpen,
@@ -48,14 +50,17 @@ export default function RolesModal({
   onTransferOwner,
   onCopyLink,
 }: Props) {
-  const canTransfer = isOwner && Boolean(onTransferOwner);
-  const [pendingOwner, setPendingOwner] = useState<{ id: number; name: string } | null>(null);
+  const canTransfer = isOwner && Boolean(onTransferOwner)
+  const [pendingOwner, setPendingOwner] = useState<{
+    id: number
+    name: string
+  } | null>(null)
 
   const confirmTransfer = () => {
-    if (!pendingOwner || !canTransfer || !onTransferOwner) return;
-    onTransferOwner(pendingOwner.id);
-    setPendingOwner(null);
-  };
+    if (!pendingOwner || !canTransfer || !onTransferOwner) return
+    onTransferOwner(pendingOwner.id)
+    setPendingOwner(null)
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg" backdrop="blur">
@@ -64,11 +69,15 @@ export default function RolesModal({
           <>
             <ModalHeader className="flex flex-col gap-1 text-lg font-semibold">
               Manage access
-              <span className="text-xs font-normal text-default-500">Assign driver / navigator roles and ownership</span>
+              <span className="text-xs font-normal text-default-500">
+                Assign driver / navigator roles and ownership
+              </span>
             </ModalHeader>
             <ModalBody className="gap-4">
               {!isOwner && (
-                <div className="text-xs text-warning-500">Only the owner can change roles or ownership.</div>
+                <div className="text-xs text-warning-500">
+                  Only the owner can change roles or ownership.
+                </div>
               )}
 
               <Table removeWrapper aria-label="Manage roles">
@@ -79,16 +88,24 @@ export default function RolesModal({
                 </TableHeader>
                 <TableBody emptyContent="No participants">
                   {users.map(([clientId, state]) => {
-                    const name = state.user?.name ?? `User ${clientId}`;
-                    const role = getRole(clientId);
-                    const isCurrentOwner = clientId === currentOwnerId;
-                    const disableRoleChange = !isOwner;
+                    const name = state.user?.name ?? `User ${clientId}`
+                    const role = getRole(clientId)
+                    const isCurrentOwner = clientId === currentOwnerId
+                    const disableRoleChange = !isOwner
 
                     return (
-                      <TableRow key={clientId} className="bg-[#121212] border-b border-zinc-800">
+                      <TableRow
+                        key={clientId}
+                        className="bg-[#121212] border-b border-zinc-800"
+                      >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full" style={{ background: state.user?.color ?? "#888" }} />
+                            <div
+                              className="h-2 w-2 rounded-full"
+                              style={{
+                                background: state.user?.color ?? '#888',
+                              }}
+                            />
                             <span className="text-sm font-medium">{name}</span>
                             {isCurrentOwner && (
                               <span className="text-[11px] rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-blue-200">
@@ -104,8 +121,8 @@ export default function RolesModal({
                             aria-label={`Set role for ${name}`}
                             isDisabled={disableRoleChange}
                             onSelectionChange={(keys) => {
-                              const sel = Array.from(keys)[0] as Role;
-                              onSetRole(clientId, sel);
+                              const sel = Array.from(keys)[0] as Role
+                              onSetRole(clientId, sel)
                             }}
                           >
                             <SelectItem key="driver">Driver</SelectItem>
@@ -129,15 +146,21 @@ export default function RolesModal({
                             <DropdownMenu
                               aria-label={`Ownership actions for ${name}`}
                               disabledKeys={
-                                canTransfer && !isCurrentOwner ? [] : ["make-owner"]
+                                canTransfer && !isCurrentOwner
+                                  ? []
+                                  : ['make-owner']
                               }
                             >
                               <DropdownItem
                                 key="make-owner"
                                 onPress={() => {
-                                  if (!canTransfer || isCurrentOwner) return;
-                                  const candidate = state.user?.name ?? `User ${clientId}`;
-                                  setPendingOwner({ id: clientId, name: candidate });
+                                  if (!canTransfer || isCurrentOwner) return
+                                  const candidate =
+                                    state.user?.name ?? `User ${clientId}`
+                                  setPendingOwner({
+                                    id: clientId,
+                                    name: candidate,
+                                  })
                                 }}
                               >
                                 Set as owner
@@ -146,7 +169,7 @@ export default function RolesModal({
                           </Dropdown>
                         </TableCell>
                       </TableRow>
-                    );
+                    )
                   })}
                 </TableBody>
               </Table>
@@ -161,17 +184,29 @@ export default function RolesModal({
               <ModalContent>
                 {() => (
                   <>
-                    <ModalHeader className="text-base font-semibold">Make owner?</ModalHeader>
+                    <ModalHeader className="text-base font-semibold">
+                      Make owner?
+                    </ModalHeader>
                     <ModalBody>
                       <div className="text-sm text-default-700">
-                        {pendingOwner ? `Make ${pendingOwner.name} the owner of this room?` : ""}
+                        {pendingOwner
+                          ? `Make ${pendingOwner.name} the owner of this room?`
+                          : ''}
                       </div>
                     </ModalBody>
                     <ModalFooter>
-                      <Button variant="flat" size="sm" onPress={() => setPendingOwner(null)}>
+                      <Button
+                        variant="flat"
+                        size="sm"
+                        onPress={() => setPendingOwner(null)}
+                      >
                         Cancel
                       </Button>
-                      <Button color="primary" size="sm" onPress={confirmTransfer}>
+                      <Button
+                        color="primary"
+                        size="sm"
+                        onPress={confirmTransfer}
+                      >
                         Yes, make owner
                       </Button>
                     </ModalFooter>
@@ -183,7 +218,12 @@ export default function RolesModal({
             <ModalFooter className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {onCopyLink && (
-                  <Button variant="bordered" onPress={onCopyLink} size="sm" className="bg-[#f5f5f5] text-black">
+                  <Button
+                    variant="bordered"
+                    onPress={onCopyLink}
+                    size="sm"
+                    className="bg-[#f5f5f5] text-black"
+                  >
                     Copy link
                   </Button>
                 )}
@@ -196,5 +236,5 @@ export default function RolesModal({
         )}
       </ModalContent>
     </Modal>
-  );
+  )
 }

@@ -1,19 +1,20 @@
-"use client";
+'use client'
 
-import React from "react";
+import React from 'react'
+
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
-} from "@heroui/react";
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from '@heroui/react'
 
 type Props = {
-  isOpen: boolean;
-  onGoHome: () => void;
-};
+  isOpen: boolean
+  onGoHome: () => void
+}
 
 export default function SessionEndedModal({ isOpen, onGoHome }: Props) {
   return (
@@ -27,7 +28,9 @@ export default function SessionEndedModal({ isOpen, onGoHome }: Props) {
       <ModalContent>
         {() => (
           <>
-            <ModalHeader className="flex flex-col gap-1">Session ended</ModalHeader>
+            <ModalHeader className="flex flex-col gap-1">
+              Session ended
+            </ModalHeader>
             <ModalBody>
               <div className="text-sm text-gray-500">
                 The owner has ended the session. This room is now closed.
@@ -42,5 +45,5 @@ export default function SessionEndedModal({ isOpen, onGoHome }: Props) {
         )}
       </ModalContent>
     </Modal>
-  );
+  )
 }

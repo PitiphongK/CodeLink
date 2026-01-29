@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 
 type Props = {
-  x: number;
-  y: number;
-  color: string;
-  name: string;
-};
+  x: number
+  y: number
+  color: string
+  name: string
+}
 
 const LiveCursor = ({ x, y, color, name }: Props) => {
   return (
@@ -35,7 +35,7 @@ const LiveCursor = ({ x, y, color, name }: Props) => {
         {name}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LiveCursor;
+export default LiveCursor

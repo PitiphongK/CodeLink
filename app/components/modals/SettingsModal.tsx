@@ -1,20 +1,22 @@
-"use client";
+'use client'
 
-import React from "react";
+import React from 'react'
+
 import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
-} from "@heroui/react";
-import { ThemeSwitcher } from "../theme-switcher";
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from '@heroui/react'
+
+import { ThemeSwitcher } from '../theme-switcher'
 
 type Props = {
-  isOpen: boolean;
-  onClose: () => void;
-};
+  isOpen: boolean
+  onClose: () => void
+}
 
 export default function SettingsModal({ isOpen, onClose }: Props) {
   return (
@@ -35,5 +37,5 @@ export default function SettingsModal({ isOpen, onClose }: Props) {
         )}
       </ModalContent>
     </Modal>
-  );
+  )
 }
