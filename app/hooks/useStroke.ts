@@ -1,32 +1,37 @@
+/*
+Manage current stroke state
+*/
+
 import { useCallback, useState } from 'react'
 
 export function useStroke() {
   const [points, setPoints] = useState<number[][]>([])
 
-  const addPoint = useCallback(
+  const startStroke = useCallback(
     (x: number, y: number, pressure: number) => {
       setPoints([[x, y, pressure]])
     },
-    [points]
+    []
   )
 
-  const updatePoints = useCallback(
+  const updateStroke = useCallback(
     (x: number, y: number, pressure: number) => {
-      setPoints([...points, [x, y, pressure]])
+      setPoints((points) => [...points, [x, y, pressure]])
     },
-    [points]
+    [] // does not require dependency 'points' because setPoints takes current state of points
   )
 
   const finishStroke = useCallback(
     () => {
       setPoints([])
     },
-    [points]
+    []
   )
 
   return {
-    addPoint,
-    updatePoints,
+    points,
+    startStroke,
+    updateStroke,
     finishStroke,
   }
 }

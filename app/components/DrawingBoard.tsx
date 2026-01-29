@@ -6,9 +6,9 @@ import { getStroke } from 'perfect-freehand'
 import * as Y from 'yjs'
 
 import { Stroke } from '@/app/interfaces/drawing'
-
 import { useStroke } from '../hooks/useStroke'
 import { getSvgPathFromStroke } from '../utils/drawing'
+import { useStrokes } from '../hooks/useStrokes'
 
 interface DrawingBoardProps {
   ydoc: Y.Doc | null
@@ -16,10 +16,8 @@ interface DrawingBoardProps {
 }
 
 function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
-  const { addPoint, updatePoints, finishStroke } = useStroke()
-
-  const [strokes, setStrokes] = useState<Stroke[]>([])
-  // const trackStroke = useRef<>
+  const { points, startStroke, updateStroke, finishStroke } = useStroke()
+  const { strokes, addStroke} = useStrokes(ydoc)
 
   // useCallback prevents unnecessary re-creating new handler functions so the memoize component dont get rerendered
   const handlePointerDown = useCallback(
@@ -29,10 +27,10 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
-      addPoint(x, y, e.pressure)
+      startStroke(x, y, e.pressure)
     },
-    [] // includes any component scope props, states, variables used inside this function
-  ) 
+    [startStroke] // includes any component scope props, states, variables, *function (in this case) used inside this function
+  )
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
@@ -40,17 +38,24 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
-      updatePoints(x, y, e.pressure)
+      updateStroke(x, y, e.pressure)
     },
-    []
+    [updateStroke]
   )
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
       e.currentTarget.releasePointerCapture(e.pointerId)
+      const stroke: Stroke = {
+        id: nanoid(),
+        points: points,
+        user: "placeholder",
+        color: "placeholder",
+      }
+      addStroke(stroke)
       finishStroke()
     },
-    []
+    [points, addStroke, finishStroke]
   )
 
   const STROKE_OPTIONS = {
@@ -66,6 +71,7 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
     <svg
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       style={{
         touchAction: 'none',
         width: '100%',
@@ -74,6 +80,12 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
       }}
     >
       {points && <path d={pathData} />}
+      {strokes.map((stroke) => {
+        const pathData = getSvgPathFromStroke(getStroke(stroke.points, STROKE_OPTIONS))
+        return (
+          <path key={stroke.id} d={pathData} />
+        )
+      })}
     </svg>
   )
 }
