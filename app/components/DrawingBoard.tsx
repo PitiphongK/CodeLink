@@ -7,8 +7,8 @@ import * as Y from 'yjs'
 
 import { Stroke } from '@/app/interfaces/drawing'
 import { useStroke } from '../hooks/useStroke'
-import { getSvgPathFromStroke } from '../utils/drawing'
 import { useStrokes } from '../hooks/useStrokes'
+import { getSvgPathFromStroke } from '../utils/drawing'
 
 interface DrawingBoardProps {
   ydoc: Y.Doc | null

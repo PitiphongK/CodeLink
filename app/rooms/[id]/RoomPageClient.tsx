@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { isValidRoomCode } from '@/app/utils/roomCode'
 
-const EditorClient = dynamic(() => import('./EditorClient'), { ssr: false })
+const EditorClient = dynamic(() => import('../../components/EditorClient'), { ssr: false })
 
 type Props = {
   id: string

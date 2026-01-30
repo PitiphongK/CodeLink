@@ -40,6 +40,7 @@ import {
   languageExtensions,
   languageOptions,
 } from '@/app/interfaces/languages'
+import { setupYjs } from '@/app/y'
 
 type Props = { roomId: string }
 
@@ -49,6 +50,8 @@ type ProviderWithSyncedEvents = {
   on: (event: 'synced', cb: (isSynced: boolean) => void) => void
   off?: (event: 'synced', cb: (isSynced: boolean) => void) => void
 }
+
+type YjsInstance = ReturnType<typeof setupYjs>
 
 function isNumberArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every((n) => typeof n === 'number')
@@ -65,6 +68,7 @@ function randColor() {
 }
 
 export default function EditorClient({ roomId }: Props) {
+  const [yjs, setYjs] = useState<YjsInstance | null>(null)
   const editorRef = useRef<
     import('monaco-editor').editor.IStandaloneCodeEditor | null
   >(null)
