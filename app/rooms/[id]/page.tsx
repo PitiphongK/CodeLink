@@ -1,11 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 
 import { getRedis } from '@/app/lib/redis/client'
-import { isValidRoomCode } from '@/app/utils/roomCode'
+import { isValidRoomCode } from '@/app/utils/room'
 
 import RoomPageClient from './RoomPageClient'
-
-export const runtime = 'nodejs'
 
 function roomKey(id: string) {
   return `room:${id}`

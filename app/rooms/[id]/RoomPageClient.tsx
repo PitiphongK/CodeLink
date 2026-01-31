@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-
-import { isValidRoomCode } from '@/app/utils/roomCode'
+import { YjsProvider } from '@/app/components/YjsProvider'
 
 const EditorClient = dynamic(() => import('../../components/EditorClient'), { ssr: false })
 
@@ -18,12 +17,6 @@ export default function RoomPageClient({ id }: Props) {
   const [hasUserName, setHasUserName] = useState<boolean | null>(null)
 
   useEffect(() => {
-    // Validate room code format and redirect if invalid
-    if (!isValidRoomCode(id)) {
-      router.replace(`/?error=invalid-room-code`)
-      return
-    }
-
     try {
       const storedName = sessionStorage.getItem('userName')
       if (!storedName) {
@@ -42,8 +35,10 @@ export default function RoomPageClient({ id }: Props) {
   }
 
   return (
-    <main className="flex flex-col h-screen overflow-hidden">
-      <EditorClient roomId={id} />
-    </main>
+    <YjsProvider roomId={id}>
+      <main className="flex flex-col h-screen overflow-hidden">
+        <EditorClient roomId={id} />
+      </main>
+    </YjsProvider>
   )
 }

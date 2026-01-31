@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import type { RoomEntryStep } from '@/app/interfaces/types'
 import { generateRandomUserName } from '@/app/utils/randomName'
-import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/roomCode'
+import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/room'
 
 function readErrorMessage(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null

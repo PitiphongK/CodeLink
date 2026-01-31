@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useRoomLanding } from '@/app/hooks/useRoomLanding'
 import type { RoomEntryStep } from '@/app/interfaces/types'
 import { generateRandomUserName } from '@/app/utils/randomName'
-import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/roomCode'
+import { formatRoomCodeInput, isValidRoomCode, normalizeRoomCode } from '@/app/utils/room'
 
 import { ThemeSwitcher } from './theme-switcher'
 
@@ -73,7 +73,14 @@ export default function HomeClient() {
             e.preventDefault()
             const normalized = normalizeRoomCode(joinRoomId)
             if (!normalized) {
-              console.warn('Invalid room code format:', joinRoomId)
+              addToast({
+                title: 'Room code invalid',
+                description:
+                  'Check the code or ask the host to create it first.',
+                color: 'danger',
+                variant: 'solid',
+                timeout: 4000,
+              })
               return
             }
             if (await isExistingRoom(normalized))
@@ -87,7 +94,6 @@ export default function HomeClient() {
                 variant: 'solid',
                 timeout: 4000,
               })
-              console.warn('Room not found:', normalized)
             }
           }}
         >
@@ -141,7 +147,7 @@ export default function HomeClient() {
         className="w-full"
         onSubmit={(e) => {
           e.preventDefault()
-          ;(isJoining ? handleJoinRoom : handleCreateRoom)()
+            ; (isJoining ? handleJoinRoom : handleCreateRoom)()
         }}
       >
         <h2 className="text-2xl font-semibold mb-1">What&apos;s your name?</h2>
