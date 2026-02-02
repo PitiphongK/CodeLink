@@ -33,41 +33,43 @@ import RolesModal from '@/app/components/modals/RolesModal'
 import SessionEndedModal from '@/app/components/modals/SessionEndedModal'
 import SessionSummaryModal from '@/app/components/modals/SessionSummaryModal'
 import SettingsModal from '@/app/components/modals/SettingsModal'
+import {
+  ANALYTICS_PUBLISH_INTERVAL_MS,
+  DEFAULT_HORIZONTAL_LAYOUT,
+  DEFAULT_VERTICAL_LAYOUT,
+  LAYOUT_SYNC_DEBOUNCE_MS,
+  MONACO_EDITOR_OPTIONS,
+  PANELS_MAP_KEYS,
+  ROOM_MAP_KEYS,
+  STORAGE_KEYS,
+  YJS_KEYS,
+  YJS_WEBSOCKET_URL,
+  getDefaultEditorContent,
+} from '@/app/constants/editor'
 import { useMonacoFollowScroll } from '@/app/hooks/useMonacoFollowScroll'
-import type { AwarenessRole, AwarenessState } from '@/app/interfaces/awareness'
+import type { AwarenessRole } from '@/app/interfaces/awareness'
+import type {
+  AwarenessEntry,
+  EditorClientProps,
+  ProviderWithSyncedEvents,
+  RoleTrackingState,
+  RoleTotals,
+  SessionSummary,
+  UserRoleContribution,
+  YjsInstance,
+} from '@/app/interfaces/editor'
 import {
   Languages,
   languageExtensions,
   languageOptions,
 } from '@/app/interfaces/languages'
-import { setupYjs } from '@/app/y'
+import {
+  generateRandomColor,
+  isNumberArray,
+  parseAnalyticsEntry,
+} from '@/app/utils/editor'
 
-type Props = { roomId: string }
-
-type AwarenessEntry = [number, AwarenessState]
-
-type ProviderWithSyncedEvents = {
-  on: (event: 'synced', cb: (isSynced: boolean) => void) => void
-  off?: (event: 'synced', cb: (isSynced: boolean) => void) => void
-}
-
-type YjsInstance = ReturnType<typeof setupYjs>
-
-function isNumberArray(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every((n) => typeof n === 'number')
-}
-
-// simple helper
-function randColor() {
-  return (
-    '#' +
-    Math.floor(Math.random() * 0xffffff)
-      .toString(16)
-      .padStart(6, '0')
-  )
-}
-
-export default function EditorClient({ roomId }: Props) {
+export default function EditorClient({ roomId }: EditorClientProps) {
   const [yjs, setYjs] = useState<YjsInstance | null>(null)
   const editorRef = useRef<
     import('monaco-editor').editor.IStandaloneCodeEditor | null
@@ -98,36 +100,16 @@ export default function EditorClient({ roomId }: Props) {
   const [hideRoleNotice, setHideRoleNotice] = useState(false)
   const [roleNoticeDontShowAgain, setRoleNoticeDontShowAgain] = useState(false)
   const sessionStartRef = useRef<number | null>(null)
-  const roleSinceRef = useRef<{
-    role: AwarenessRole
-    startedAt: number
-  } | null>(null)
-  const roleTotalsRef = useRef<{
-    driver: number
-    navigator: number
-    none: number
-  }>({
+  const roleSinceRef = useRef<RoleTrackingState | null>(null)
+  const roleTotalsRef = useRef<RoleTotals>({
     driver: 0,
     navigator: 0,
     none: 0,
   })
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
-  const [sessionSummary, setSessionSummary] = useState<{
-    sessionMs: number
-    driverMs: number
-    navigatorMs: number
-    noneMs: number
-  } | null>(null)
-  const [teamRoleContribution, setTeamRoleContribution] = useState<
-    Array<{
-      clientId: number
-      name: string
-      driverMs: number
-      navigatorMs: number
-      noneMs: number
-    }>
-  >([])
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
+  const [teamRoleContribution, setTeamRoleContribution] = useState<UserRoleContribution[]>([])
   const [overlayActive, setOverlayActive] = useState(false)
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
   const [hLayout, setHLayout] = useState<number[] | null>(null)
@@ -146,7 +128,7 @@ export default function EditorClient({ roomId }: Props) {
   useEffect(() => {
     const ydoc = new Y.Doc()
     const provider = new WebsocketProvider(
-      'wss://demos.yjs.dev/ws',
+      YJS_WEBSOCKET_URL,
       roomId,
       ydoc
     )
@@ -182,15 +164,15 @@ export default function EditorClient({ roomId }: Props) {
     }
 
     // roles shared map
-    const rolesMap = ydoc.getMap<AwarenessRole>('roles')
+    const rolesMap = ydoc.getMap<AwarenessRole>(YJS_KEYS.ROLES)
     rolesMapRef.current = rolesMap
 
     // analytics shared map: each client writes their own timing totals
-    const analyticsMap = ydoc.getMap<unknown>('analytics')
+    const analyticsMap = ydoc.getMap<unknown>(YJS_KEYS.ANALYTICS)
     analyticsMapRef.current = analyticsMap
 
     // Determine and persist room owner (first starter becomes owner)
-    const roomMap = ydoc.getMap<unknown>('room')
+    const roomMap = ydoc.getMap<unknown>(YJS_KEYS.ROOM)
     roomMapRef.current = roomMap
     setRoomReady(true)
     const currentId = provider.awareness.clientID
@@ -210,7 +192,7 @@ export default function EditorClient({ roomId }: Props) {
 
       if (ownerInitRef.current) return
       ownerInitRef.current = true
-      const existingOwner = roomMap.get('owner')
+      const existingOwner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       if (existingOwner == null) {
         const candidates = Array.from(
           provider.awareness.getStates().keys()
@@ -218,10 +200,10 @@ export default function EditorClient({ roomId }: Props) {
         const arbiter =
           candidates.length > 0 ? Math.min(...candidates) : currentId
         if (currentId === arbiter) {
-          roomMap.set('owner', arbiter)
+          roomMap.set(ROOM_MAP_KEYS.OWNER, arbiter)
         }
       }
-      const owner = roomMap.get('owner')
+      const owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       setOwnerId(typeof owner === 'number' ? owner : null)
       setIsOwner(owner === currentId)
     }
@@ -230,34 +212,34 @@ export default function EditorClient({ roomId }: Props) {
     providerEvents.on('synced', syncedHandler)
     // keep owner state in sync if room owner changes
     const roomObserver = () => {
-      const owner = roomMap.get('owner')
+      const owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       setOwnerId(typeof owner === 'number' ? owner : null)
       setIsOwner(owner === currentId)
     }
     roomMap.observe(roomObserver)
 
     // panels shared map for syncing layout across participants
-    const panelsMap = ydoc.getMap<unknown>('panels')
+    const panelsMap = ydoc.getMap<unknown>(YJS_KEYS.PANELS)
     panelsMapRef.current = panelsMap
 
     const ensurePanelDefaults = () => {
       // Initialize defaults if not present
-      const hasH = isNumberArray(panelsMap.get('h'))
-      const hasV = isNumberArray(panelsMap.get('v'))
-      const defaultH = [50, 50]
-      const defaultV = [60, 40]
-      if (!hasH) panelsMap.set('h', defaultH)
-      if (!hasV) panelsMap.set('v', defaultV)
+      const hasH = isNumberArray(panelsMap.get(PANELS_MAP_KEYS.HORIZONTAL))
+      const hasV = isNumberArray(panelsMap.get(PANELS_MAP_KEYS.VERTICAL))
+      const defaultH = [...DEFAULT_HORIZONTAL_LAYOUT]
+      const defaultV = [...DEFAULT_VERTICAL_LAYOUT]
+      if (!hasH) panelsMap.set(PANELS_MAP_KEYS.HORIZONTAL, defaultH)
+      if (!hasV) panelsMap.set(PANELS_MAP_KEYS.VERTICAL, defaultV)
       // Also seed local state so UI renders with values
-      const h = panelsMap.get('h')
-      const v = panelsMap.get('v')
+      const h = panelsMap.get(PANELS_MAP_KEYS.HORIZONTAL)
+      const v = panelsMap.get(PANELS_MAP_KEYS.VERTICAL)
       setHLayout(isNumberArray(h) ? h : defaultH)
       setVLayout(isNumberArray(v) ? v : defaultV)
     }
 
     const panelsObserver = () => {
-      const h = panelsMap.get('h')
-      const v = panelsMap.get('v')
+      const h = panelsMap.get(PANELS_MAP_KEYS.HORIZONTAL)
+      const v = panelsMap.get(PANELS_MAP_KEYS.VERTICAL)
       if (isNumberArray(h)) setHLayout(h.slice())
       if (isNumberArray(v)) setVLayout(v.slice())
     }
@@ -282,10 +264,10 @@ export default function EditorClient({ roomId }: Props) {
     rolesObserver()
 
     // set presence
-    const userName = sessionStorage.getItem('userName') || 'Anonymous'
+    const userName = sessionStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Anonymous'
     provider.awareness.setLocalStateField('user', {
       name: userName,
-      color: randColor(),
+      color: generateRandomColor(),
     })
 
     ydocRef.current = ydoc
@@ -329,7 +311,7 @@ export default function EditorClient({ roomId }: Props) {
     if (!roomMap) return
 
     const onRoomChange = () => {
-      const destroyed = roomMap.get('destroyed')
+      const destroyed = roomMap.get(ROOM_MAP_KEYS.DESTROYED)
       if (destroyed !== true) return
 
       // Host stays to see analytics; everyone else leaves.
@@ -358,7 +340,7 @@ export default function EditorClient({ roomId }: Props) {
   // Load persisted preference for role notice.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('codelink:hideRoleNotice')
+      const raw = localStorage.getItem(STORAGE_KEYS.HIDE_ROLE_NOTICE)
       setHideRoleNotice(raw === '1')
     } catch {
       setHideRoleNotice(false)
@@ -475,13 +457,12 @@ export default function EditorClient({ roomId }: Props) {
     if (analyticsMap) {
       for (const [k, v] of analyticsMap.entries()) {
         if (typeof k !== 'string') continue
-        const obj: Record<string, unknown> =
-          v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
-        const driverMs = typeof obj.driverMs === 'number' ? obj.driverMs : 0
-        const navigatorMs =
-          typeof obj.navigatorMs === 'number' ? obj.navigatorMs : 0
-        const noneMs = typeof obj.noneMs === 'number' ? obj.noneMs : 0
-        byId.set(k, { driverMs, navigatorMs, noneMs })
+        const parsed = parseAnalyticsEntry(v)
+        byId.set(k, {
+          driverMs: parsed.driverMs,
+          navigatorMs: parsed.navigatorMs,
+          noneMs: parsed.noneMs,
+        })
       }
     }
 
@@ -520,7 +501,7 @@ export default function EditorClient({ roomId }: Props) {
     const interval = window.setInterval(() => {
       const now = Date.now()
       publishMyRoleTotals(now)
-    }, 5000)
+    }, ANALYTICS_PUBLISH_INTERVAL_MS)
 
     return () => {
       window.clearInterval(interval)
@@ -578,7 +559,7 @@ export default function EditorClient({ roomId }: Props) {
     const rolesMap = rolesMapRef.current
     if (!provider || !roomMap || !rolesMap) return
 
-    if (roomMap.get('destroyed') === true) return
+    if (roomMap.get(ROOM_MAP_KEYS.DESTROYED) === true) return
 
     const currentOwner = ownerId
     if (currentOwner == null) return
@@ -617,13 +598,13 @@ export default function EditorClient({ roomId }: Props) {
     if (!provider || !roomMap) return
     if (!providerSynced) return
 
-    const destroyed = roomMap.get('destroyed')
+    const destroyed = roomMap.get(ROOM_MAP_KEYS.DESTROYED)
     if (destroyed === true) return
 
     const states = Array.from(provider.awareness.getStates().keys())
     const presentIds = new Set<number>(states as number[])
 
-    const currentOwner = roomMap.get('owner')
+    const currentOwner = roomMap.get(ROOM_MAP_KEYS.OWNER)
     const ownerMissing = currentOwner == null
     const ownerLeft =
       typeof currentOwner === 'number' && !presentIds.has(currentOwner)
@@ -635,11 +616,11 @@ export default function EditorClient({ roomId }: Props) {
         const arbiter = Math.min(...candidates)
         const selfId = provider.awareness.clientID
         if (selfId === arbiter) {
-          roomMap.set('owner', arbiter)
+          roomMap.set(ROOM_MAP_KEYS.OWNER, arbiter)
         }
       } else {
         // No users left - mark destroyed for cleanup
-        roomMap.set('destroyed', true)
+        roomMap.set(ROOM_MAP_KEYS.DESTROYED, true)
       }
     }
   }, [providerSynced])
@@ -667,12 +648,12 @@ export default function EditorClient({ roomId }: Props) {
         const randomIdx = Math.floor(Math.random() * presentIds.length)
         const nextOwner = presentIds[randomIdx]
         try {
-          roomMap.set('owner', nextOwner)
+          roomMap.set(ROOM_MAP_KEYS.OWNER, nextOwner)
         } catch {}
       } else {
         // Owner is last user: mark destroyed and clear ephemeral maps
         try {
-          roomMap.set('destroyed', true)
+          roomMap.set(ROOM_MAP_KEYS.DESTROYED, true)
           if (rolesMap) {
             for (const k of Array.from(rolesMap.keys())) {
               rolesMap.delete(k)
@@ -702,7 +683,7 @@ export default function EditorClient({ roomId }: Props) {
     editorRef.current = editor
     const ydoc = ydocRef.current!
     const provider = providerRef.current!
-    const ytext = ydoc.getText('monaco')
+    const ytext = ydoc.getText(YJS_KEYS.MONACO_TEXT)
 
     // Dynamically import y-monaco and create the binding
     const { MonacoBinding } = await import('y-monaco')
@@ -714,10 +695,7 @@ export default function EditorClient({ roomId }: Props) {
 
     // Set initial value if the document is empty
     if (ytext.length === 0) {
-      ytext.insert(
-        0,
-        `// Room: ${roomId}\nfunction add(a, b) { return a + b }\n`
-      )
+      ytext.insert(0, getDefaultEditorContent(roomId))
     }
   }
 
@@ -763,8 +741,8 @@ export default function EditorClient({ roomId }: Props) {
       }
 
       endedAt = Date.now()
-      roomMapRef.current?.set('destroyed', true)
-      roomMapRef.current?.set('destroyedAt', endedAt)
+      roomMapRef.current?.set(ROOM_MAP_KEYS.DESTROYED, true)
+      roomMapRef.current?.set(ROOM_MAP_KEYS.DESTROYED_AT, endedAt)
 
       addToast({
         title: 'Session ended',
@@ -816,13 +794,12 @@ export default function EditorClient({ roomId }: Props) {
     if (analyticsMap) {
       for (const [k, v] of analyticsMap.entries()) {
         if (typeof k !== 'string') continue
-        const obj: Record<string, unknown> =
-          v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
-        const driverMs = typeof obj.driverMs === 'number' ? obj.driverMs : 0
-        const navigatorMs =
-          typeof obj.navigatorMs === 'number' ? obj.navigatorMs : 0
-        const noneMs = typeof obj.noneMs === 'number' ? obj.noneMs : 0
-        byId.set(k, { driverMs, navigatorMs, noneMs })
+        const parsed = parseAnalyticsEntry(v)
+        byId.set(k, {
+          driverMs: parsed.driverMs,
+          navigatorMs: parsed.navigatorMs,
+          noneMs: parsed.noneMs,
+        })
       }
     }
 
@@ -977,8 +954,8 @@ export default function EditorClient({ roomId }: Props) {
       if (myRole === 'driver') {
         if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current)
         layoutDebounceRef.current = setTimeout(() => {
-          panelsMapRef.current?.set('h', sizes)
-        }, 300)
+          panelsMapRef.current?.set(PANELS_MAP_KEYS.HORIZONTAL, sizes)
+        }, LAYOUT_SYNC_DEBOUNCE_MS)
       }
     },
     [myRole]
@@ -990,8 +967,8 @@ export default function EditorClient({ roomId }: Props) {
       if (myRole === 'driver') {
         if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current)
         layoutDebounceRef.current = setTimeout(() => {
-          panelsMapRef.current?.set('v', sizes)
-        }, 300)
+          panelsMapRef.current?.set(PANELS_MAP_KEYS.VERTICAL, sizes)
+        }, LAYOUT_SYNC_DEBOUNCE_MS)
       }
     },
     [myRole]
@@ -1014,7 +991,7 @@ export default function EditorClient({ roomId }: Props) {
         onOk={() => {
           if (roleNoticeDontShowAgain) {
             try {
-              localStorage.setItem('codelink:hideRoleNotice', '1')
+              localStorage.setItem(STORAGE_KEYS.HIDE_ROLE_NOTICE, '1')
             } catch {}
             setHideRoleNotice(true)
           }
@@ -1047,7 +1024,7 @@ export default function EditorClient({ roomId }: Props) {
         currentOwnerId={ownerId}
         onTransferOwner={(targetId) => {
           if (!isOwner) return
-          roomMapRef.current?.set('owner', targetId)
+          roomMapRef.current?.set(ROOM_MAP_KEYS.OWNER, targetId)
         }}
         onCopyLink={handleInvite}
       />
@@ -1148,13 +1125,7 @@ export default function EditorClient({ roomId }: Props) {
                     height="100%"
                     language={language}
                     theme="vs-dark"
-                    options={{
-                      automaticLayout: true,
-                      minimap: { enabled: false },
-                      wordWrap: 'on',
-                      scrollBeyondLastLine: false,
-                      fontSize: 14,
-                    }}
+                    options={MONACO_EDITOR_OPTIONS}
                     onMount={handleMount}
                   />
                   <EditorOverlayDrawing
