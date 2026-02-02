@@ -1,19 +1,11 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ImperativePanelGroupHandle,
   Panel,
   PanelGroup,
   PanelResizeHandle,
 } from 'react-resizable-panels'
 
-import {
-  Button,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-} from '@heroui/react'
 import { addToast } from '@heroui/toast'
 import Editor from '@monaco-editor/react'
 import { WebsocketProvider } from 'y-websocket'
@@ -21,23 +13,17 @@ import * as Y from 'yjs'
 
 import DrawingBoard from '@/app/components/DrawingBoard'
 import EditorOverlayDrawing from '@/app/components/EditorOverlayDrawing'
-import LiveCursor from '@/app/components/LiveCursor'
-import SharedTerminal, {
-  type SharedTerminalHandle,
-} from '@/app/components/SharedTerminal'
-import Toolbar from '@/app/components/Toolbar'
-import EndSessionConfirmModal from '@/app/components/modals/EndSessionConfirmModal'
-import GitHubImportModal from '@/app/components/modals/GitHubImportModal'
-import RoleNoticeModal from '@/app/components/modals/RoleNoticeModal'
-import RolesModal from '@/app/components/modals/RolesModal'
-import SessionEndedModal from '@/app/components/modals/SessionEndedModal'
-import SessionSummaryModal from '@/app/components/modals/SessionSummaryModal'
-import SettingsModal from '@/app/components/modals/SettingsModal'
 import {
-  ANALYTICS_PUBLISH_INTERVAL_MS,
+  EditorModals,
+  LanguageSelector,
+  LiveCursors,
+  TerminalPanel,
+} from '@/app/components/editor'
+import { type SharedTerminalHandle } from '@/app/components/SharedTerminal'
+import Toolbar from '@/app/components/Toolbar'
+import {
   DEFAULT_HORIZONTAL_LAYOUT,
   DEFAULT_VERTICAL_LAYOUT,
-  LAYOUT_SYNC_DEBOUNCE_MS,
   MONACO_EDITOR_OPTIONS,
   PANELS_MAP_KEYS,
   ROOM_MAP_KEYS,
@@ -46,31 +32,49 @@ import {
   YJS_WEBSOCKET_URL,
   getDefaultEditorContent,
 } from '@/app/constants/editor'
+import {
+  useFileOperations,
+  usePanelLayout,
+  useRoleNotice,
+  useSessionAnalytics,
+} from '@/app/hooks/editor'
 import { useMonacoFollowScroll } from '@/app/hooks/useMonacoFollowScroll'
 import type { AwarenessRole } from '@/app/interfaces/awareness'
 import type {
   AwarenessEntry,
   EditorClientProps,
   ProviderWithSyncedEvents,
-  RoleTrackingState,
-  RoleTotals,
   SessionSummary,
   UserRoleContribution,
-  YjsInstance,
 } from '@/app/interfaces/editor'
-import {
-  Languages,
-  languageExtensions,
-  languageOptions,
-} from '@/app/interfaces/languages'
+import { Languages } from '@/app/interfaces/languages'
 import {
   generateRandomColor,
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
 
+// ============================================================================
+// EditorClient Component
+// ============================================================================
+
+/**
+ * Main collaborative code editor component.
+ * 
+ * Provides real-time collaboration features including:
+ * - Synchronized code editing via Yjs/Monaco
+ * - Role-based access control (driver/navigator)
+ * - Live cursor tracking
+ * - Shared terminal for code execution
+ * - Drawing overlay for annotations
+ * - Session analytics tracking
+ * 
+ * @param props.roomId - Unique identifier for the collaboration room
+ */
 export default function EditorClient({ roomId }: EditorClientProps) {
-  const [yjs, setYjs] = useState<YjsInstance | null>(null)
+  // ============================================================================
+  // Refs - Yjs Integration
+  // ============================================================================
   const editorRef = useRef<
     import('monaco-editor').editor.IStandaloneCodeEditor | null
   >(null)
@@ -80,51 +84,103 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const roomMapRef = useRef<Y.Map<unknown> | null>(null)
   const panelsMapRef = useRef<Y.Map<unknown> | null>(null)
   const analyticsMapRef = useRef<Y.Map<unknown> | null>(null)
+  const updateUsersRef = useRef<(() => void) | undefined>(undefined)
+
+  // ============================================================================
+  // State - User Presence & Editor
+  // ============================================================================
   const [userStates, setUserStates] = useState<AwarenessEntry[]>([])
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+  const terminalRef = useRef<SharedTerminalHandle | null>(null)
+
+  // ============================================================================
+  // State - Modals
+  // ============================================================================
   const [rolesOpen, setRolesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [endConfirmOpen, setEndConfirmOpen] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [sessionEndedOpen, setSessionEndedOpen] = useState(false)
+  const [githubImportOpen, setGithubImportOpen] = useState(false)
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
+  const [teamRoleContribution, setTeamRoleContribution] = useState<UserRoleContribution[]>([])
+
+  // ============================================================================
+  // State - Ownership & Sync
+  // ============================================================================
   const [isOwner, setIsOwner] = useState(false)
   const isOwnerRef = useRef(false)
   const [ownerId, setOwnerId] = useState<number | null>(null)
   const ownerInitRef = useRef(false)
   const lastOwnerIdRef = useRef<number | null>(null)
   const [providerSynced, setProviderSynced] = useState(false)
+  const [roomReady, setRoomReady] = useState(false)
+
+  // ============================================================================
+  // State - Role & Drawing
+  // ============================================================================
   const [myRole, setMyRole] = useState<AwarenessRole>('none')
   const myRoleRef = useRef<AwarenessRole>('none')
-  const roleNoticeShownRef = useRef(false)
-  const [roleNoticeOpen, setRoleNoticeOpen] = useState(false)
-  const [hideRoleNotice, setHideRoleNotice] = useState(false)
-  const [roleNoticeDontShowAgain, setRoleNoticeDontShowAgain] = useState(false)
-  const sessionStartRef = useRef<number | null>(null)
-  const roleSinceRef = useRef<RoleTrackingState | null>(null)
-  const roleTotalsRef = useRef<RoleTotals>({
-    driver: 0,
-    navigator: 0,
-    none: 0,
-  })
-  const [summaryOpen, setSummaryOpen] = useState(false)
-  const [analyticsOpen, setAnalyticsOpen] = useState(false)
-  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
-  const [teamRoleContribution, setTeamRoleContribution] = useState<UserRoleContribution[]>([])
   const [overlayActive, setOverlayActive] = useState(false)
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
-  const [hLayout, setHLayout] = useState<number[] | null>(null)
-  const [vLayout, setVLayout] = useState<number[] | null>(null)
-  const hGroupRef = useRef<ImperativePanelGroupHandle | null>(null)
-  const vGroupRef = useRef<ImperativePanelGroupHandle | null>(null)
-  const layoutDebounceRef = useRef<NodeJS.Timeout | null>(null)
-  const [roomReady, setRoomReady] = useState(false)
-  const [sessionEndedOpen, setSessionEndedOpen] = useState(false)
-  const [githubImportOpen, setGithubImportOpen] = useState(false)
 
-  // Memoize the awareness update function to prevent infinite loops
-  const updateUsersRef = useRef<(() => void) | undefined>(undefined)
+  // ============================================================================
+  // Custom Hooks - Extracted Business Logic
+  // ============================================================================
+  const {
+    handleExport,
+    handleFileImport,
+    handleGitHubImport,
+  } = useFileOperations({
+    editorRef,
+    language,
+    roomId,
+  })
 
-  // Create/destroy Yjs doc + provider when room changes
+  const {
+    setHLayout,
+    setVLayout,
+    hGroupRef,
+    vGroupRef,
+    handleHLayoutChange,
+    handleVLayoutChange,
+  } = usePanelLayout({
+    panelsMapRef,
+    myRole,
+  })
+
+  const {
+    publishMyRoleTotals,
+    computeSessionSummaryNow,
+    computeTeamContributionNow,
+    sessionStartRef,
+    roleSinceRef,
+    roleTotalsRef,
+  } = useSessionAnalytics({
+    myRole,
+    providerSynced,
+    providerRef,
+    analyticsMapRef,
+    userStates,
+  })
+
+  const {
+    roleNoticeOpen,
+    roleNoticeDontShowAgain,
+    setRoleNoticeDontShowAgain,
+    handleRoleNoticeOk,
+  } = useRoleNotice({
+    myRole,
+    providerSynced,
+  })
+
+  // ============================================================================
+  // Effect - Yjs Document & Provider Lifecycle
+  // ============================================================================
   useEffect(() => {
     const ydoc = new Y.Doc()
     const provider = new WebsocketProvider(
@@ -151,7 +207,27 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const states = Array.from(
         provider.awareness.getStates().entries()
       ) as AwarenessEntry[]
-      setUserStates(states)
+      
+      // Only update if the client IDs have changed to prevent infinite loops
+      setUserStates((prev) => {
+        const prevIds = prev.map(([id]) => id).sort((a, b) => a - b)
+        const newIds = states.map(([id]) => id).sort((a, b) => a - b)
+        
+        // Check if the set of client IDs is the same
+        if (
+          prevIds.length === newIds.length &&
+          prevIds.every((id, i) => id === newIds[i])
+        ) {
+          // Client IDs haven't changed, but we still need to update for cursor/state changes
+          // Use JSON comparison for the full state to detect actual changes
+          const prevJson = JSON.stringify(prev)
+          const newJson = JSON.stringify(states)
+          if (prevJson === newJson) {
+            return prev // No change, keep previous reference
+          }
+        }
+        return states
+      })
     }
 
     updateUsersRef.current = updateUsers
@@ -181,19 +257,12 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       if (!isSynced) return
       setProviderSynced(true)
 
-      // Start the local timer once, after initial sync.
-      if (sessionStartRef.current == null) {
-        sessionStartRef.current = Date.now()
-        roleSinceRef.current = {
-          role: myRoleRef.current,
-          startedAt: sessionStartRef.current,
-        }
-      }
-
       if (ownerInitRef.current) return
       ownerInitRef.current = true
-      const existingOwner = roomMap.get(ROOM_MAP_KEYS.OWNER)
-      if (existingOwner == null) {
+      
+      // Determine owner - first client becomes owner if none exists
+      let owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
+      if (owner == null) {
         const candidates = Array.from(
           provider.awareness.getStates().keys()
         ) as number[]
@@ -201,11 +270,30 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           candidates.length > 0 ? Math.min(...candidates) : currentId
         if (currentId === arbiter) {
           roomMap.set(ROOM_MAP_KEYS.OWNER, arbiter)
+          owner = arbiter
         }
       }
-      const owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
+      
+      const isCurrentUserOwner = owner === currentId
       setOwnerId(typeof owner === 'number' ? owner : null)
-      setIsOwner(owner === currentId)
+      setIsOwner(isCurrentUserOwner)
+      isOwnerRef.current = isCurrentUserOwner
+      
+      // Immediately assign roles after owner is determined
+      // Owner is driver, everyone else is navigator
+      const myInitialRole: AwarenessRole = isCurrentUserOwner ? 'driver' : 'navigator'
+      rolesMap.set(currentId.toString(), myInitialRole)
+      setMyRole(myInitialRole)
+      myRoleRef.current = myInitialRole
+      
+      // Start the local timer with the correct initial role
+      if (sessionStartRef.current == null) {
+        sessionStartRef.current = Date.now()
+        roleSinceRef.current = {
+          role: myInitialRole,
+          startedAt: sessionStartRef.current,
+        }
+      }
     }
     // y-websocket emits 'synced' when initial doc sync completes
     const providerEvents = provider as unknown as ProviderWithSyncedEvents
@@ -256,12 +344,14 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const rolesObserver = () => {
       const selfId = provider.awareness.clientID
       const fromMap = rolesMap.get(selfId.toString())
-      const role: AwarenessRole =
-        fromMap ?? (isOwnerRef.current ? 'driver' : 'navigator')
-      setMyRole(role)
+      // Only update if we have an explicit role from the map
+      // Initial role is set in syncedHandler
+      if (fromMap != null) {
+        setMyRole(fromMap)
+        myRoleRef.current = fromMap
+      }
     }
     rolesMap.observe(rolesObserver)
-    rolesObserver()
 
     // set presence
     const userName = sessionStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Anonymous'
@@ -286,7 +376,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       try {
         providerEvents.off?.('synced', syncedHandler)
         providerEvents.off?.('synced', panelsSyncedHandler)
-      } catch {}
+      } catch { }
       provider.destroy()
       ydoc.destroy()
       ydocRef.current = null
@@ -304,7 +394,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [roomId])
 
-  // If the room is marked as destroyed (ended by host), kick non-owners back to home.
+  // ============================================================================
+  // Effects - Room State & Ownership
+  // ============================================================================
+
+  /** Handle room destruction - kick non-owners when room is ended */
   useEffect(() => {
     if (!roomReady) return
     const roomMap = roomMapRef.current
@@ -327,188 +421,35 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [isOwner, roomReady])
 
-  // Keep an always-fresh owner value for callbacks created during initial mount.
+  /** Keep isOwnerRef in sync for callbacks */
   useEffect(() => {
     isOwnerRef.current = isOwner
   }, [isOwner])
 
-  // Keep an always-fresh role value for callbacks that shouldn't depend on myRole.
+  /** Keep myRoleRef in sync for callbacks */
   useEffect(() => {
     myRoleRef.current = myRole
   }, [myRole])
 
-  // Load persisted preference for role notice.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.HIDE_ROLE_NOTICE)
-      setHideRoleNotice(raw === '1')
-    } catch {
-      setHideRoleNotice(false)
-    }
-  }, [])
+  // ============================================================================
+  // Callbacks - User Actions
+  // ============================================================================
 
-  // Show role notice once per session when the role is known.
-  useEffect(() => {
-    if (!providerSynced) return
-    if (hideRoleNotice) return
-    if (roleNoticeShownRef.current) return
-
-    if (myRole === 'driver' || myRole === 'navigator') {
-      roleNoticeShownRef.current = true
-      setRoleNoticeDontShowAgain(false)
-      setRoleNoticeOpen(true)
-    }
-  }, [hideRoleNotice, myRole, providerSynced])
-
-  // Track time spent in each role (for the current user).
-  useEffect(() => {
-    const now = Date.now()
-    const start = sessionStartRef.current
-
-    if (start == null) {
-      // We'll initialize once the session start is known.
-      return
-    }
-
-    const current = roleSinceRef.current
-    if (!current) {
-      roleSinceRef.current = { role: myRole, startedAt: now }
-      return
-    }
-
-    if (current.role === myRole) return
-
-    const delta = Math.max(0, now - current.startedAt)
-    if (current.role === 'driver') roleTotalsRef.current.driver += delta
-    else if (current.role === 'navigator')
-      roleTotalsRef.current.navigator += delta
-    else roleTotalsRef.current.none += delta
-
-    roleSinceRef.current = { role: myRole, startedAt: now }
-  }, [myRole])
-
-  const publishMyRoleTotals = useCallback((now: number) => {
-    const provider = providerRef.current
-    const analyticsMap = analyticsMapRef.current
-    if (!provider || !analyticsMap) return
-
-    const startedAt = sessionStartRef.current
-    if (startedAt == null) return
-
-    // Compute totals including current in-progress segment.
-    const current = roleSinceRef.current
-    const base = roleTotalsRef.current
-    const totals = {
-      driver: base.driver,
-      navigator: base.navigator,
-      none: base.none,
-    }
-
-    if (current) {
-      const delta = Math.max(0, now - current.startedAt)
-      if (current.role === 'driver') totals.driver += delta
-      else if (current.role === 'navigator') totals.navigator += delta
-      else totals.none += delta
-    }
-
-    const selfIdStr = provider.awareness.clientID.toString()
-    analyticsMap.set(selfIdStr, {
-      driverMs: totals.driver,
-      navigatorMs: totals.navigator,
-      noneMs: totals.none,
-    })
-  }, [])
-
-  const computeSessionSummaryNow = useCallback((now: number) => {
-    const startedAt = sessionStartRef.current
-    if (startedAt == null) return null
-
-    // Base totals + current segment
-    const base = roleTotalsRef.current
-    const totals = {
-      driver: base.driver,
-      navigator: base.navigator,
-      none: base.none,
-    }
-
-    const current = roleSinceRef.current
-    if (current) {
-      const delta = Math.max(0, now - current.startedAt)
-      if (current.role === 'driver') totals.driver += delta
-      else if (current.role === 'navigator') totals.navigator += delta
-      else totals.none += delta
-    }
-
-    return {
-      sessionMs: Math.max(0, now - startedAt),
-      driverMs: totals.driver,
-      navigatorMs: totals.navigator,
-      noneMs: totals.none,
-    }
-  }, [])
-
-  const computeTeamContributionNow = useCallback(() => {
-    const analyticsMap = analyticsMapRef.current
-    const byId = new Map<
-      string,
-      { driverMs: number; navigatorMs: number; noneMs: number }
-    >()
-
-    if (analyticsMap) {
-      for (const [k, v] of analyticsMap.entries()) {
-        if (typeof k !== 'string') continue
-        const parsed = parseAnalyticsEntry(v)
-        byId.set(k, {
-          driverMs: parsed.driverMs,
-          navigatorMs: parsed.navigatorMs,
-          noneMs: parsed.noneMs,
-        })
-      }
-    }
-
-    return userStates
-      .map(([clientId, state]) => {
-        const totals = byId.get(clientId.toString()) ?? {
-          driverMs: 0,
-          navigatorMs: 0,
-          noneMs: 0,
-        }
-        return {
-          clientId,
-          name: state.user?.name ?? `User ${clientId}`,
-          ...totals,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [userStates])
-
+  /** Open analytics modal with current session data */
   const handleOpenAnalytics = useCallback(() => {
     const now = Date.now()
     publishMyRoleTotals(now)
-
     const summary = computeSessionSummaryNow(now)
     setSessionSummary(summary)
     setTeamRoleContribution(computeTeamContributionNow())
     setAnalyticsOpen(true)
-  }, [
-    computeSessionSummaryNow,
-    computeTeamContributionNow,
-    publishMyRoleTotals,
-  ])
+  }, [computeSessionSummaryNow, computeTeamContributionNow, publishMyRoleTotals])
 
-  // Periodically publish so other clients (and the owner) can read up-to-date totals.
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const now = Date.now()
-      publishMyRoleTotals(now)
-    }, ANALYTICS_PUBLISH_INTERVAL_MS)
+  // ============================================================================
+  // Effects - Role Enforcement & Follow Mode
+  // ============================================================================
 
-    return () => {
-      window.clearInterval(interval)
-    }
-  }, [publishMyRoleTotals])
-
-  // Robust follow scroll via awareness client IDs
+  /** Robust follow scroll via awareness client IDs */
   useMonacoFollowScroll({
     editor: editorRef.current,
     awareness: providerRef.current?.awareness ?? null,
@@ -516,7 +457,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     onTargetGone: () => setFollowing(null),
   })
 
-  // Enforce roles: driver can edit, navigator is read-only and auto-follows driver
+  /** Enforce roles: driver can edit, navigator is read-only and auto-follows driver */
   useEffect(() => {
     const editor = editorRef.current
     const awareness = providerRef.current?.awareness
@@ -549,8 +490,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [userStates, following])
 
-  // Auto-assign roles: owner is driver, everyone else is navigator.
-  // The current owner is the only client allowed to write roles.
+  /**
+   * Auto-assign roles: owner is driver, everyone else is navigator.
+   * Only the current owner can write roles. Triggers on userStates change
+   * to assign roles to new joiners.
+   */
   useEffect(() => {
     if (!providerSynced) return
 
@@ -583,15 +527,22 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
     rolesMap.set(currentOwner.toString(), 'driver')
 
+    // Assign navigator role to any new users who don't have a role yet
     for (const cid of presentIds) {
       if (cid === currentOwner) continue
-      rolesMap.set(cid.toString(), 'navigator')
+      const existingRole = rolesMap.get(cid.toString())
+      if (existingRole == null) {
+        rolesMap.set(cid.toString(), 'navigator')
+      }
     }
 
     lastOwnerIdRef.current = currentOwner
-  }, [ownerId, providerSynced])
+  }, [ownerId, providerSynced, userStates])
 
-  // Ensure an owner exists; if missing or left, pick a random present user.
+  /**
+   * Handle room destruction when no users are present.
+   * Note: Ownership is NOT transferred when owner leaves (to allow owner to refresh/rejoin)
+   */
   useEffect(() => {
     const provider = providerRef.current
     const roomMap = roomMapRef.current
@@ -604,28 +555,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const states = Array.from(provider.awareness.getStates().keys())
     const presentIds = new Set<number>(states as number[])
 
-    const currentOwner = roomMap.get(ROOM_MAP_KEYS.OWNER)
-    const ownerMissing = currentOwner == null
-    const ownerLeft =
-      typeof currentOwner === 'number' && !presentIds.has(currentOwner)
-    if (ownerMissing || ownerLeft) {
-      if (presentIds.size > 0) {
-        const candidates = Array.from(presentIds)
-        // Deterministic arbitration: only the smallest clientId writes,
-        // and the owner is always elected as that smallest id.
-        const arbiter = Math.min(...candidates)
-        const selfId = provider.awareness.clientID
-        if (selfId === arbiter) {
-          roomMap.set(ROOM_MAP_KEYS.OWNER, arbiter)
-        }
-      } else {
-        // No users left - mark destroyed for cleanup
-        roomMap.set(ROOM_MAP_KEYS.DESTROYED, true)
-      }
+    if (presentIds.size === 0) {
+      roomMap.set(ROOM_MAP_KEYS.DESTROYED, true)
     }
   }, [providerSynced])
 
-  // Proactive ownership handoff on tab close and destroy when last user leaves
+  /**
+   * Cleanup on tab close - only destroy room if owner is the last user.
+   * Note: Ownership is NOT transferred when owner leaves (to allow owner to refresh/rejoin)
+   */
   useEffect(() => {
     const pagehideOptions: AddEventListenerOptions = { capture: true }
     const handleOwnerExit = () => {
@@ -634,6 +572,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const roomMap = roomMapRef.current
       const panelsMap = panelsMapRef.current
       if (!provider || !roomMap) return
+      
+      if (!isOwner) return
+      
       const selfId = provider.awareness.clientID
       const states = Array.from(
         provider.awareness.getStates().keys()
@@ -641,17 +582,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const presentIds = states.filter((cid) => cid !== selfId)
       const presentCountExcludingSelf = presentIds.length
 
-      if (!isOwner) return
-
-      if (presentCountExcludingSelf > 0) {
-        // Proactively pick a random next owner among other participants
-        const randomIdx = Math.floor(Math.random() * presentIds.length)
-        const nextOwner = presentIds[randomIdx]
-        try {
-          roomMap.set(ROOM_MAP_KEYS.OWNER, nextOwner)
-        } catch {}
-      } else {
-        // Owner is last user: mark destroyed and clear ephemeral maps
+      // Only destroy if owner is the last user
+      // Do NOT transfer ownership - owner can refresh and rejoin
+      if (presentCountExcludingSelf === 0) {
         try {
           roomMap.set(ROOM_MAP_KEYS.DESTROYED, true)
           if (rolesMap) {
@@ -664,7 +597,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               panelsMap.delete(k)
             }
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -677,6 +610,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [isOwner])
 
+  // ============================================================================
+  // Handlers - Editor & Session Management
+  // ============================================================================
+
+  /** Handle Monaco editor mount and Yjs binding setup */
   const handleMount = async (
     editor: import('monaco-editor').editor.IStandaloneCodeEditor
   ) => {
@@ -699,6 +637,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }
 
+  /** Copy room invite link to clipboard */
   const handleInvite = () => {
     const url = window.location.href
     navigator.clipboard.writeText(url).then(
@@ -724,6 +663,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     )
   }
 
+  /** End the current session (owner only) - shows summary and destroys room */
   const handleEndSession = useCallback(async () => {
     if (!isOwner) return
 
@@ -823,84 +763,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     setEndingSession(false)
   }, [endingSession, isOwner, publishMyRoleTotals, roomId, userStates])
 
-  const handleExport = useCallback(() => {
-    if (editorRef.current) {
-      const fileExtension = languageExtensions[language] || '.txt'
-      const content = editorRef.current.getValue()
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `codelink-room-${roomId}${fileExtension}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    }
-  }, [language, roomId])
-
-  const handleFileImport = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (file && editorRef.current) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const content = e.target?.result as string
-          editorRef.current?.setValue(content)
-        }
-        reader.readAsText(file)
-      }
-    },
-    [editorRef]
-  )
-
-  const handleGitHubImport = useCallback(
-    async (repoUrl: string, filePath?: string) => {
-      try {
-        const response = await fetch('/api/github/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl, filePath }),
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Failed to import from GitHub')
-        }
-
-        const data = await response.json()
-
-        if (data.type === 'file' && editorRef.current) {
-          editorRef.current.setValue(data.content)
-
-          addToast({
-            title: 'Import successful',
-            description: `Imported ${data.filename} from GitHub`,
-            color: 'success',
-            variant: 'solid',
-            timeout: 3000,
-          })
-        } else if (data.type === 'list') {
-          addToast({
-            title: 'Choose a file',
-            description: 'Please specify a file path in the repository',
-            color: 'warning',
-            variant: 'solid',
-            timeout: 4000,
-          })
-        }
-      } catch (error) {
-        console.error('GitHub import error:', error)
-        throw error
-      }
-    },
-    []
-  )
-
-  // Run code on the server and show output
-  const [running, setRunning] = useState(false)
-  const terminalRef = useRef<SharedTerminalHandle | null>(null)
-
+  /** Run code in the terminal */
   const handleRun = async () => {
     if (!editorRef.current) return
     const code = editorRef.current.getValue()
@@ -916,6 +779,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }
 
+  // ============================================================================
+  // Effect - Event Listeners for File Operations
+  // ============================================================================
   useEffect(() => {
     const handleExportEvent = () => handleExport()
     window.addEventListener('toolbar:export', handleExportEvent)
@@ -932,88 +798,32 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [handleExport, handleFileImport])
 
-  // Apply incoming layout updates to PanelGroups
-  useEffect(() => {
-    if (hLayout && hGroupRef.current) {
-      try {
-        hGroupRef.current.setLayout(hLayout)
-      } catch {}
-    }
-  }, [hLayout])
-  useEffect(() => {
-    if (vLayout && vGroupRef.current) {
-      try {
-        vGroupRef.current.setLayout(vLayout)
-      } catch {}
-    }
-  }, [vLayout])
-
-  const handleHLayoutChange = useCallback(
-    (sizes: number[]) => {
-      setHLayout(sizes)
-      if (myRole === 'driver') {
-        if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current)
-        layoutDebounceRef.current = setTimeout(() => {
-          panelsMapRef.current?.set(PANELS_MAP_KEYS.HORIZONTAL, sizes)
-        }, LAYOUT_SYNC_DEBOUNCE_MS)
-      }
-    },
-    [myRole]
-  )
-
-  const handleVLayoutChange = useCallback(
-    (sizes: number[]) => {
-      setVLayout(sizes)
-      if (myRole === 'driver') {
-        if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current)
-        layoutDebounceRef.current = setTimeout(() => {
-          panelsMapRef.current?.set(PANELS_MAP_KEYS.VERTICAL, sizes)
-        }, LAYOUT_SYNC_DEBOUNCE_MS)
-      }
-    },
-    [myRole]
-  )
-
-  // Clean up debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (layoutDebounceRef.current) clearTimeout(layoutDebounceRef.current)
-    }
-  }, [])
-
+  // ============================================================================
+  // Render
+  // ============================================================================
   return (
     <div className="flex flex-col h-full">
-      <RoleNoticeModal
-        isOpen={roleNoticeOpen}
-        role={myRole === 'driver' ? 'driver' : 'navigator'}
-        dontShowAgain={roleNoticeDontShowAgain}
-        onChangeDontShowAgain={setRoleNoticeDontShowAgain}
-        onOk={() => {
-          if (roleNoticeDontShowAgain) {
-            try {
-              localStorage.setItem(STORAGE_KEYS.HIDE_ROLE_NOTICE, '1')
-            } catch {}
-            setHideRoleNotice(true)
-          }
-          setRoleNoticeOpen(false)
-        }}
-      />
-      <GitHubImportModal
-        isOpen={githubImportOpen}
-        onClose={() => setGithubImportOpen(false)}
-        onImport={handleGitHubImport}
-      />
-      <SessionEndedModal
-        isOpen={sessionEndedOpen}
+      <EditorModals
+        // Role notice
+        roleNoticeOpen={roleNoticeOpen}
+        myRole={myRole}
+        roleNoticeDontShowAgain={roleNoticeDontShowAgain}
+        onRoleNoticeDontShowAgainChange={setRoleNoticeDontShowAgain}
+        onRoleNoticeOk={handleRoleNoticeOk}
+        // GitHub import
+        githubImportOpen={githubImportOpen}
+        onGithubImportClose={() => setGithubImportOpen(false)}
+        onGitHubImport={handleGitHubImport}
+        // Session ended
+        sessionEndedOpen={sessionEndedOpen}
         onGoHome={() => {
           window.location.href = '/'
         }}
-      />
-      <RolesModal
-        isOpen={rolesOpen}
-        onClose={() => setRolesOpen(false)}
+        // Roles
+        rolesOpen={rolesOpen}
+        onRolesClose={() => setRolesOpen(false)}
         isOwner={isOwner}
-        users={userStates}
+        userStates={userStates}
         getRole={(clientId) =>
           rolesMapRef.current?.get(clientId.toString()) ?? 'none'
         }
@@ -1027,55 +837,33 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           roomMapRef.current?.set(ROOM_MAP_KEYS.OWNER, targetId)
         }}
         onCopyLink={handleInvite}
-      />
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-      <EndSessionConfirmModal
-        isOpen={endConfirmOpen}
-        pending={endingSession}
-        onCancel={() => setEndConfirmOpen(false)}
-        onConfirm={async () => {
+        // Settings
+        settingsOpen={settingsOpen}
+        onSettingsClose={() => setSettingsOpen(false)}
+        // End confirm
+        endConfirmOpen={endConfirmOpen}
+        endingSession={endingSession}
+        onEndConfirmCancel={() => setEndConfirmOpen(false)}
+        onEndConfirmConfirm={async () => {
           await handleEndSession()
-          // Close confirm once the session end flow finishes.
           setEndConfirmOpen(false)
         }}
-      />
-      <SessionSummaryModal
-        isOpen={summaryOpen}
-        summary={sessionSummary}
-        users={teamRoleContribution}
-        onClose={() => {
+        // Summary
+        summaryOpen={summaryOpen}
+        sessionSummary={sessionSummary}
+        teamRoleContribution={teamRoleContribution}
+        onSummaryClose={() => {
           setSummaryOpen(false)
           window.location.href = '/'
         }}
+        // Analytics
+        analyticsOpen={analyticsOpen}
+        onAnalyticsClose={() => setAnalyticsOpen(false)}
       />
-      <SessionSummaryModal
-        isOpen={analyticsOpen}
-        summary={sessionSummary}
-        users={teamRoleContribution}
-        primaryActionLabel="Close"
-        onClose={() => setAnalyticsOpen(false)}
+      <LiveCursors
+        userStates={userStates}
+        myClientId={providerRef.current?.awareness.clientID}
       />
-      {userStates
-        .filter(
-          ([clientId]) => clientId !== providerRef.current?.awareness.clientID
-        )
-        .map(([clientId, state]) => {
-          if (state.cursor) {
-            return (
-              <LiveCursor
-                key={clientId}
-                x={state.cursor.x}
-                y={state.cursor.y}
-                color={state.user?.color ?? '#888'}
-                name={state.user?.name ?? `User ${clientId}`}
-              />
-            )
-          }
-          return null
-        })}
       <Toolbar
         onRun={handleRun}
         running={running}
@@ -1091,7 +879,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         followingName={
           following
             ? (userStates.find(([cid]) => cid.toString() === following)?.[1]
-                .user?.name ?? null)
+              .user?.name ?? null)
             : null
         }
         onManageRoles={() => setRolesOpen(true)}
@@ -1133,38 +921,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                     active={overlayActive}
                     tool={drawingTool}
                   />
-                  <div className="absolute bottom-4 right-4 z-10">
-                    <Dropdown>
-                      <DropdownTrigger>
-                        <Button className="capitalize" variant="bordered">
-                          {language}
-                        </Button>
-                      </DropdownTrigger>
-                      <DropdownMenu
-                        disallowEmptySelection
-                        aria-label="Language selection"
-                        selectedKeys={[language]}
-                        selectionMode="single"
-                        variant="flat"
-                        items={languageOptions}
-                        onSelectionChange={(keys) => {
-                          const selected = Array.from(keys)[0] as Languages
-                          setLanguage(selected)
-                        }}
-                      >
-                        {(option) => (
-                          <DropdownItem key={option.value}>
-                            {option.label}
-                          </DropdownItem>
-                        )}
-                      </DropdownMenu>
-                    </Dropdown>
-                  </div>
+                  <LanguageSelector
+                    language={language}
+                    onLanguageChange={setLanguage}
+                  />
                 </div>
               </Panel>
               <PanelResizeHandle
                 disabled={myRole === 'navigator'}
-                className="h-[3px] bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"
+                className="h-0.75 bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
               />
               <Panel
                 collapsible={true}
@@ -1172,18 +937,13 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 minSize={10}
                 className=" bg-[#1e1e1e] flex flex-col"
               >
-                <div className="p-4 flex flex-col h-full">
-                  <h3 className="text-sm font-medium">Terminal</h3>
-                  <div className="mt-2 flex-1 min-h-0">
-                    <SharedTerminal ref={terminalRef} roomId={roomId} />
-                  </div>
-                </div>
+                <TerminalPanel ref={terminalRef} roomId={roomId} />
               </Panel>
             </PanelGroup>
           </Panel>
           <PanelResizeHandle
             disabled={myRole === 'navigator'}
-            className="w-[3px] bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 [&[data-resize-handle-active]]:bg-blue-400"
+            className="w-0.75 bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
           />
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
             <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
