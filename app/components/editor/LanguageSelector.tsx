@@ -45,12 +45,11 @@ export default function LanguageSelector({
 
   return (
     <div
-      className={`absolute bottom-4 right-4 z-10 ${className} ${
-        disabled ? 'opacity-60 pointer-events-none' : ''
-      }`}
+      className={`absolute bottom-4 right-4 z-10 ${className} ${disabled ? 'opacity-60 pointer-events-none' : ''
+        }`}
       aria-disabled={disabled}
     >
-      <Dropdown>
+      <Dropdown placement="bottom-end" className='rounded-xl border-1 border-neutral-700'>
         <DropdownTrigger>
           <Button
             className="capitalize bg-surface-secondary hover:bg-surface-elevated text-text-primary"

@@ -938,6 +938,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           window.location.href = '/'
         }}
         isOwner={isOwner}
+        myRole={myRole}
         drawingTool={drawingTool}
         onChangeDrawingTool={setDrawingTool}
         overlayActive={overlayActive}

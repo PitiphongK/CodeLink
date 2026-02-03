@@ -11,7 +11,7 @@ import type { RoomEntryStep } from '@/app/interfaces/types'
 import { generateRandomUserName } from '@/app/utils/randomName'
 import { formatRoomCodeInput, normalizeRoomCode } from '@/app/utils/roomCode'
 
-import { ThemeSwitcher } from './theme-switcher'
+import { Logo } from './Logo'
 
 export default function HomeClient() {
   const router = useRouter()
@@ -61,76 +61,80 @@ export default function HomeClient() {
 
   const renderInitial = () => (
     <>
-      <div className="flex flex-col items-start p-8 w-full md:w-1/2">
-        <h2 className="text-2xl font-semibold mb-1">Join a room</h2>
-        <p className="text-sm font-medium mb-5 text-gray-500">
-          Join an existing pair programming session.
-        </p>
+      <div className="flex flex-col sm:flex-row gap-4 w-full">
+        {/* Join Section */}
+        <div className="flex flex-col items-start p-6 w-full sm:w-1/2 rounded-lg">
+          <h2 className="text-xl font-semibold mb-1">Join a room</h2>
+          <p className="text-sm font-medium mb-4 text-gray-500">
+            Join an existing session
+          </p>
 
-        <Form
-          className="w-full"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            const normalized = normalizeRoomCode(joinRoomId)
-            if (!normalized) {
-              console.warn('Invalid room code format:', joinRoomId)
-              return
-            }
-            if (await isExistingRoom(normalized))
-              setStep('join-name' as RoomEntryStep)
-            else {
-              addToast({
-                title: 'Room not found',
-                description:
-                  'Check the code or ask the host to create it first.',
-                color: 'danger',
-                variant: 'solid',
-                timeout: 4000,
-              })
-              console.warn('Room not found:', normalized)
-            }
-          }}
-        >
-          <Input
-            isRequired
-            errorMessage="Please enter a valid room code."
-            placeholder="abc-def-ghi"
-            size="lg"
-            type="text"
-            className="mb-4 w-full"
-            value={joinRoomId}
-            onChange={(e) => setJoinRoomId(formatRoomCodeInput(e.target.value))}
-          />
-          <Button
-            color="primary"
-            type="submit"
-            disabled={isSubmitting || !joinRoomId.trim()}
+          <Form
+            className="w-full"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const normalized = normalizeRoomCode(joinRoomId)
+              if (!normalized) {
+                console.warn('Invalid room code format:', joinRoomId)
+                return
+              }
+              if (await isExistingRoom(normalized))
+                setStep('join-name' as RoomEntryStep)
+              else {
+                addToast({
+                  title: 'Room not found',
+                  description:
+                    'Check the code or ask the host to create it first.',
+                  color: 'danger',
+                  variant: 'solid',
+                  timeout: 4000,
+                })
+                console.warn('Room not found:', normalized)
+              }
+            }}
           >
-            {isSubmitting ? (
-              <Spinner color="default" variant="simple" size="sm" />
-            ) : (
-              'Join'
-            )}
+            <Input
+              isRequired
+              errorMessage="Please enter a valid room code."
+              placeholder="abc-def-ghi"
+              size="lg"
+              type="text"
+              className="mb-4 w-full"
+              value={joinRoomId}
+              onChange={(e) => setJoinRoomId(formatRoomCodeInput(e.target.value))}
+            />
+            <Button
+              color="primary"
+              type="submit"
+              disabled={isSubmitting || !joinRoomId.trim()}
+              className="w-full"
+            >
+              {isSubmitting ? (
+                <Spinner color="default" variant="simple" size="sm" />
+              ) : (
+                'Join'
+              )}
+            </Button>
+          </Form>
+        </div>
+
+        {/* Create Section */}
+        <div className="flex flex-col items-start p-6 w-full sm:w-1/2 rounded-lg">
+          <h2 className="text-xl font-semibold mb-1">Create a room</h2>
+          <p className="text-sm font-medium mb-4 text-gray-500">
+            Start a new session
+          </p>
+          <Button
+            color="default"
+            onPress={() => {
+              if (!userName.trim()) setUserName(generateRandomUserName())
+              setStep('create-name')
+            }}
+            className="w-full mt-auto"
+          >
+            Create
           </Button>
-        </Form>
-      </div>
-
-      <div className="hidden md:block w-px bg-gray-300 dark:bg-gray-700 h-64 mx-8"></div>
-
-      <div className="flex flex-col items-start p-8 w-full md:w-1/2">
-        <h2 className="text-2xl font-semibold mb-1">Create a room</h2>
-        <p className="text-sm font-medium mb-5 text-gray-500">
-          Start a new pair programming session.
-        </p>
-        <Button
-          color="primary"
-          onPress={() => {
-            if (!userName.trim()) setUserName(generateRandomUserName())
-            setStep('create-name')
-          }}
-        >
-          Create
-        </Button>
+        </div>
       </div>
     </>
   )
@@ -178,7 +182,9 @@ export default function HomeClient() {
   return (
     <main>
       <div className="min-h-screen flex flex-col items-center py-8 px-4">
-        <div className="mb-20 text-2xl">CodeLink</div>
+        <div className="mb-20 text-2xl">
+          <Logo className="w-64 h-auto text-gray-900 dark:text-white" />
+        </div>
 
         <div className="flex items-start justify-center w-full max-w-4xl">
           {step === 'initial' && renderInitial()}
@@ -186,8 +192,6 @@ export default function HomeClient() {
           {step === 'create-name' && renderNameStep(false)}
         </div>
       </div>
-
-      <ThemeSwitcher />
     </main>
   )
 }
