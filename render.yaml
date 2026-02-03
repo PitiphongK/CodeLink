@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: terminal-server
+    plan: starter
+    runtime: node
+    buildCommand: pnpm install && pnpm build:server
+    startCommand: pnpm start:server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: '4000'
+      - key: CORS_ORIGIN
+        # Update this to your Vercel app URL
+        value: https://your-vercel-app.vercel.app

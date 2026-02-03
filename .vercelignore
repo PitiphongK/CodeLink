@@ -1,0 +1,3 @@
+# Exclude the old server code - we'll run terminal-server separately
+server/index.ts
+dist/index.js

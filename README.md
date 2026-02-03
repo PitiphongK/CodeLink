@@ -2,6 +2,12 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Redis
+
+This project uses Redis for room persistence.
+
+- Set `REDIS_URL` (example: `redis://localhost:6379`).
+
 First, run the development server:
 
 ```bash
@@ -34,3 +40,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Room Codes
+
+- Format: `XXX-XXX-XXX` using uppercase A–Z letters only.
+- Creating a room generates a strict code automatically.
+- Joining a room accepts codes case-insensitively and normalizes them.
+- Examples: `ABC-DEF-GHI`, `QWE-ASD-ZXC`.
