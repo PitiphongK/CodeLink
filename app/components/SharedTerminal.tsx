@@ -12,6 +12,7 @@ import {
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
+import { useTheme } from 'next-themes'
 import { type Socket, io } from 'socket.io-client'
 
 export type SharedTerminalHandle = {
@@ -31,8 +32,27 @@ function getSocketUrl() {
   return `${window.location.protocol}//${window.location.hostname}:4000`
 }
 
+function getTerminalTheme(resolvedTheme: string | undefined) {
+  if (resolvedTheme === 'dark') {
+    return {
+      background: '#1b1b1b',
+      foreground: '#ededed',
+      cursor: '#ededed',
+      selectionBackground: 'rgba(255, 255, 255, 0.15)',
+    }
+  }
+
+  return {
+    background: '#ffffff',
+    foreground: '#171717',
+    cursor: '#171717',
+    selectionBackground: 'rgba(0, 0, 0, 0.15)',
+  }
+}
+
 const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
   function SharedTerminal({ roomId }, ref) {
+    const { resolvedTheme } = useTheme()
     const containerRef = useRef<HTMLDivElement | null>(null)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
@@ -74,9 +94,7 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
         disableStdin: true,
         scrollback: 2000,
         fontSize: 12,
-        theme: {
-          background: '#1b1b1b',
-        },
+        theme: getTerminalTheme(resolvedTheme),
       })
 
       term.loadAddon(fit)
@@ -98,6 +116,12 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
         fitRef.current = null
       }
     }, [])
+
+    useEffect(() => {
+      const term = termRef.current
+      if (!term) return
+      term.options.theme = getTerminalTheme(resolvedTheme)
+    }, [resolvedTheme])
 
     useEffect(() => {
       const socket = io(getSocketUrl(), {
@@ -192,7 +216,7 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
         ) : null}
         <div
           ref={containerRef}
-          className="w-full flex-1 min-h-0 rounded overflow-hidden bg-[#1b1b1b]"
+          className="w-full flex-1 min-h-0 rounded overflow-hidden bg-surface-primary"
         />
       </div>
     )

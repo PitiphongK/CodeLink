@@ -8,6 +8,7 @@ import {
 
 import { addToast } from '@heroui/toast'
 import Editor from '@monaco-editor/react'
+import { useTheme } from 'next-themes'
 import { WebsocketProvider } from 'y-websocket'
 import * as Y from 'yjs'
 
@@ -72,6 +73,9 @@ import {
  * @param props.roomId - Unique identifier for the collaboration room
  */
 export default function EditorClient({ roomId }: EditorClientProps) {
+  const { resolvedTheme } = useTheme()
+  const monacoTheme = resolvedTheme === 'dark' ? 'vs-dark' : 'vs'
+
   // ============================================================================
   // Refs - Yjs Integration
   // ============================================================================
@@ -207,12 +211,12 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const states = Array.from(
         provider.awareness.getStates().entries()
       ) as AwarenessEntry[]
-      
+
       // Only update if the client IDs have changed to prevent infinite loops
       setUserStates((prev) => {
         const prevIds = prev.map(([id]) => id).sort((a, b) => a - b)
         const newIds = states.map(([id]) => id).sort((a, b) => a - b)
-        
+
         // Check if the set of client IDs is the same
         if (
           prevIds.length === newIds.length &&
@@ -259,7 +263,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
       if (ownerInitRef.current) return
       ownerInitRef.current = true
-      
+
       // Determine owner - first client becomes owner if none exists
       let owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       if (owner == null) {
@@ -273,19 +277,19 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           owner = arbiter
         }
       }
-      
+
       const isCurrentUserOwner = owner === currentId
       setOwnerId(typeof owner === 'number' ? owner : null)
       setIsOwner(isCurrentUserOwner)
       isOwnerRef.current = isCurrentUserOwner
-      
+
       // Immediately assign roles after owner is determined
       // Owner is driver, everyone else is navigator
       const myInitialRole: AwarenessRole = isCurrentUserOwner ? 'driver' : 'navigator'
       rolesMap.set(currentId.toString(), myInitialRole)
       setMyRole(myInitialRole)
       myRoleRef.current = myInitialRole
-      
+
       // Start the local timer with the correct initial role
       if (sessionStartRef.current == null) {
         sessionStartRef.current = Date.now()
@@ -572,9 +576,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const roomMap = roomMapRef.current
       const panelsMap = panelsMapRef.current
       if (!provider || !roomMap) return
-      
+
       if (!isOwner) return
-      
+
       const selfId = provider.awareness.clientID
       const states = Array.from(
         provider.awareness.getStates().keys()
@@ -912,7 +916,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                   <Editor
                     height="100%"
                     language={language}
-                    theme="vs-dark"
+                    theme={monacoTheme}
                     options={MONACO_EDITOR_OPTIONS}
                     onMount={handleMount}
                   />
@@ -929,13 +933,13 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               </Panel>
               <PanelResizeHandle
                 disabled={myRole === 'navigator'}
-                className="h-0.75 bg-[#404040] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+                className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
               />
               <Panel
                 collapsible={true}
                 collapsedSize={0}
                 minSize={10}
-                className=" bg-[#1e1e1e] flex flex-col"
+                className="bg-surface-primary flex flex-col"
               >
                 <TerminalPanel ref={terminalRef} roomId={roomId} />
               </Panel>
@@ -943,7 +947,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           </Panel>
           <PanelResizeHandle
             disabled={myRole === 'navigator'}
-            className="w-0.75 bg-[#1e1e1e] flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+            className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
           />
           <Panel collapsible={true} collapsedSize={0} minSize={10}>
             <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />

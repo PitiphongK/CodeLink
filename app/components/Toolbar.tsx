@@ -69,7 +69,7 @@ export default function Toolbar({
   }
 
   return (
-    <div className="bg-[#1b1b1b] border-b border-zinc-700">
+    <div className="bg-surface-primary border-b border-border-strong">
       {/* Top row: file/help, run (centered), invite/roles/settings */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 h-[48px]">
         <div className="flex items-center gap-2 justify-self-start">
@@ -82,7 +82,10 @@ export default function Toolbar({
           />
           <Dropdown>
             <DropdownTrigger>
-              <Button className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
+              <Button
+                className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
+                size="sm"
+              >
                 <span className="text-sm">File</span>
               </Button>
             </DropdownTrigger>
@@ -110,7 +113,10 @@ export default function Toolbar({
               <DropdownItem key="export">Export</DropdownItem>
             </DropdownMenu>
           </Dropdown>
-          <Button className="bg-[#2c2c2c] hover:bg-[#4f4f4f]" size="sm">
+          <Button
+            className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
+            size="sm"
+          >
             <span className="text-sm">Help</span>
           </Button>
         </div>
@@ -124,7 +130,7 @@ export default function Toolbar({
 
         <div className="flex items-center gap-2 justify-self-end">
           <Button
-            className="bg-[#2c2c2c] hover:bg-[#4f4f4f]"
+            className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
             size="sm"
             onPress={onManageRoles}
           >
@@ -133,7 +139,7 @@ export default function Toolbar({
           </Button>
           <Button
             isIconOnly
-            className={`bg-[#2c2c2c] hover:bg-[#4f4f4f] ${overlayActive ? 'bg-blue-600' : ''}`}
+            className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary ${overlayActive ? 'bg-blue-600' : ''}`}
             size="sm"
             onPress={onToggleOverlay}
             aria-label="Toggle overlay drawing"
@@ -142,7 +148,7 @@ export default function Toolbar({
           </Button>
           <Button
             isIconOnly
-            className="bg-[#2c2c2c] hover:bg-[#4f4f4f]"
+            className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
             size="sm"
             onPress={onOpenAnalytics}
             aria-label="Open analytics"
@@ -151,7 +157,7 @@ export default function Toolbar({
           </Button>
           <Button
             isIconOnly
-            className="bg-[#2c2c2c] hover:bg-[#4f4f4f]"
+            className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
             size="sm"
             onPress={onOpenSettings}
           >
@@ -163,7 +169,7 @@ export default function Toolbar({
             </Button>
           ) : (
             <Button
-              className="bg-[#2c2c2c] hover:bg-[#4f4f4f]"
+              className="bg-surface-secondary hover:bg-surface-elevated text-text-primary"
               size="sm"
               onPress={onLeaveSession}
             >
@@ -178,7 +184,7 @@ export default function Toolbar({
         <div className="flex items-center gap-1">
           <Button
             isIconOnly
-            className={`bg-[#2c2c2c] hover:bg-[#4f4f4f] ${drawingTool === 'pen' ? 'bg-blue-600' : ''}`}
+            className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary ${drawingTool === 'pen' ? 'bg-blue-600' : ''}`}
             size="sm"
             onPress={() => onChangeDrawingTool?.('pen')}
             aria-label="Pen"
@@ -187,7 +193,7 @@ export default function Toolbar({
           </Button>
           <Button
             isIconOnly
-            className={`bg-[#2c2c2c] hover:bg-[#4f4f4f] ${drawingTool === 'eraser' ? 'bg-blue-600' : ''}`}
+            className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary ${drawingTool === 'eraser' ? 'bg-blue-600' : ''}`}
             size="sm"
             onPress={() => onChangeDrawingTool?.('eraser')}
             aria-label="Eraser"

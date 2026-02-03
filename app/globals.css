@@ -4,18 +4,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f5f3;
+  --foreground: #1f1e24;
+  --color-surface-primary: #ffffff;
+  --color-surface-secondary: #f4f5f7;
+  --color-surface-elevated: #eaecef;
+  --color-border-subtle: #e5e7eb;
+  --color-border-strong: #d0d7de;
+  --color-text-primary: #1f1e24;
+  --color-text-secondary: #5a5a72;
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --color-surface-primary: #1b1b1b;
+  --color-surface-secondary: #2c2c2c;
+  --color-surface-elevated: #404040;
+  --color-border-subtle: #3f3f46;
+  --color-border-strong: #52525b;
+  --color-text-primary: #ededed;
+  --color-text-secondary: #a3a3a3;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface-primary: var(--color-surface-primary);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-strong: var(--color-border-strong);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

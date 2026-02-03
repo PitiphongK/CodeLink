@@ -31,7 +31,10 @@ export default function LanguageSelector({
     <div className={`absolute bottom-4 right-4 z-10 ${className}`}>
       <Dropdown>
         <DropdownTrigger>
-          <Button className="capitalize" variant="bordered">
+          <Button
+            className="capitalize bg-surface-secondary hover:bg-surface-elevated text-text-primary"
+            variant="bordered"
+          >
             {language}
           </Button>
         </DropdownTrigger>

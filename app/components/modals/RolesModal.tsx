@@ -96,7 +96,7 @@ export default function RolesModal({
                     return (
                       <TableRow
                         key={clientId}
-                        className="bg-[#121212] border-b border-zinc-800"
+                        className="bg-surface-primary border-b border-border-subtle"
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default function RolesModal({
                     variant="bordered"
                     onPress={onCopyLink}
                     size="sm"
-                    className="bg-[#f5f5f5] text-black"
+                    className="bg-surface-secondary text-text-primary"
                   >
                     Copy link
                   </Button>
