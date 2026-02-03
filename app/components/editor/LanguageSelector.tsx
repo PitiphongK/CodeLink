@@ -15,6 +15,8 @@ interface LanguageSelectorProps {
   language: Languages
   /** Callback when language changes */
   onLanguageChange: (language: Languages) => void
+  /** Whether the selector is disabled */
+  disabled?: boolean
   /** Additional class names */
   className?: string
 }
@@ -25,15 +27,36 @@ interface LanguageSelectorProps {
 export default function LanguageSelector({
   language,
   onLanguageChange,
+  disabled = false,
   className = '',
 }: LanguageSelectorProps) {
+  const getLanguageIcon = (value: Languages) => {
+    switch (value) {
+      case Languages.JAVASCRIPT:
+        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg" width="14" height="14" />
+      case Languages.TYPESCRIPT:
+        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="14" height="14" />
+      case Languages.PYTHON:
+        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" width="14" height="14" />
+      default:
+        return null
+    }
+  }
+
   return (
-    <div className={`absolute bottom-4 right-4 z-10 ${className}`}>
+    <div
+      className={`absolute bottom-4 right-4 z-10 ${className} ${
+        disabled ? 'opacity-60 pointer-events-none' : ''
+      }`}
+      aria-disabled={disabled}
+    >
       <Dropdown>
         <DropdownTrigger>
           <Button
             className="capitalize bg-surface-secondary hover:bg-surface-elevated text-text-primary"
             variant="bordered"
+            isDisabled={disabled}
+            startContent={getLanguageIcon(language)}
           >
             {language}
           </Button>
@@ -51,7 +74,9 @@ export default function LanguageSelector({
           }}
         >
           {(option) => (
-            <DropdownItem key={option.value}>{option.label}</DropdownItem>
+            <DropdownItem key={option.value} startContent={getLanguageIcon(option.value)}>
+              {option.label}
+            </DropdownItem>
           )}
         </DropdownMenu>
       </Dropdown>

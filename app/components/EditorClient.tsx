@@ -55,6 +55,10 @@ import {
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
 
+const LANGUAGE_VALUES = new Set(Object.values(Languages))
+const isValidLanguage = (value: unknown): value is Languages =>
+  LANGUAGE_VALUES.has(value as Languages)
+
 // ============================================================================
 // EditorClient Component
 // ============================================================================
@@ -95,6 +99,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // ============================================================================
   const [userStates, setUserStates] = useState<AwarenessEntry[]>([])
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT)
+  const languageRef = useRef<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
   const terminalRef = useRef<SharedTerminalHandle | null>(null)
@@ -132,6 +137,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const [overlayActive, setOverlayActive] = useState(false)
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
 
+  /** Sync language to room map (driver only) */
+  const handleLanguageChange = useCallback((next: Languages) => {
+    if (next === languageRef.current) return
+    if (myRoleRef.current === 'navigator') return
+    languageRef.current = next
+    setLanguage(next)
+    roomMapRef.current?.set(ROOM_MAP_KEYS.LANGUAGE, next)
+  }, [])
+
   // ============================================================================
   // Custom Hooks - Extracted Business Logic
   // ============================================================================
@@ -143,6 +157,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     editorRef,
     language,
     roomId,
+    onLanguageChange: handleLanguageChange,
   })
 
   const {
@@ -293,6 +308,17 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       setMyRole(myInitialRole)
       myRoleRef.current = myInitialRole
 
+      // Initialize or read shared language
+      const sharedLanguage = roomMap.get(ROOM_MAP_KEYS.LANGUAGE)
+      if (!isValidLanguage(sharedLanguage)) {
+        if (isCurrentUserOwner) {
+          roomMap.set(ROOM_MAP_KEYS.LANGUAGE, languageRef.current)
+        }
+      } else if (sharedLanguage !== languageRef.current) {
+        languageRef.current = sharedLanguage
+        setLanguage(sharedLanguage)
+      }
+
       // Start the local timer with the correct initial role
       if (sessionStartRef.current == null) {
         sessionStartRef.current = Date.now()
@@ -310,6 +336,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       setOwnerId(typeof owner === 'number' ? owner : null)
       setIsOwner(owner === currentId)
+
+      const sharedLanguage = roomMap.get(ROOM_MAP_KEYS.LANGUAGE)
+      if (
+        isValidLanguage(sharedLanguage) &&
+        sharedLanguage !== languageRef.current
+      ) {
+        languageRef.current = sharedLanguage
+        setLanguage(sharedLanguage)
+      }
     }
     roomMap.observe(roomObserver)
 
@@ -353,9 +388,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const fromMap = rolesMap.get(selfId.toString())
       // Only update if we have an explicit role from the map
       // Initial role is set in syncedHandler
-      if (fromMap != null) {
-        setMyRole(fromMap)
+      if (fromMap != null && fromMap !== myRoleRef.current) {
         myRoleRef.current = fromMap
+        setMyRole(fromMap)
       }
     }
     rolesMap.observe(rolesObserver)
@@ -438,6 +473,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     myRoleRef.current = myRole
   }, [myRole])
 
+  /** Keep languageRef in sync for callbacks */
+  useEffect(() => {
+    languageRef.current = language
+  }, [language])
+
   // ============================================================================
   // Callbacks - User Actions
   // ============================================================================
@@ -451,6 +491,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     setTeamRoleContribution(computeTeamContributionNow())
     setAnalyticsOpen(true)
   }, [computeSessionSummaryNow, computeTeamContributionNow, publishMyRoleTotals])
+
 
   // ============================================================================
   // Effects - Role Enforcement & Follow Mode
@@ -930,7 +971,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                   />
                   <LanguageSelector
                     language={language}
-                    onLanguageChange={setLanguage}
+                    onLanguageChange={handleLanguageChange}
+                    disabled={myRole === 'navigator'}
                   />
                 </div>
               </Panel>
