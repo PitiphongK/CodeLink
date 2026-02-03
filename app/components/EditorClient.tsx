@@ -194,9 +194,12 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     )
 
     const handleMouseMove = (event: MouseEvent) => {
+      // Normalize cursor position to 0-1 range for cross-screen compatibility
+      const normalizedX = window.innerWidth > 0 ? event.clientX / window.innerWidth : 0
+      const normalizedY = window.innerHeight > 0 ? event.clientY / window.innerHeight : 0
       provider.awareness.setLocalStateField('cursor', {
-        x: event.clientX,
-        y: event.clientY,
+        x: Math.max(0, Math.min(1, normalizedX)),
+        y: Math.max(0, Math.min(1, normalizedY)),
       })
     }
     window.addEventListener('mousemove', handleMouseMove)

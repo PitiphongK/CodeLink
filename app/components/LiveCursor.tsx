@@ -1,22 +1,32 @@
 import React from 'react'
 
 type Props = {
+  /** X position in screen pixels (may go out of bounds) */
   x: number
+  /** Y position in screen pixels (may go out of bounds) */
   y: number
+  /** Cursor color */
   color: string
+  /** User display name */
   name: string
 }
 
+/**
+ * Displays a remote user's cursor with their name label.
+ * Cursor can render outside viewport bounds if the user's screen was larger.
+ * Use `overflow: visible` on parent to allow out-of-bounds rendering.
+ */
 const LiveCursor = ({ x, y, color, name }: Props) => {
   return (
     <div
-      className="pointer-events-none absolute"
+      className="pointer-events-none fixed"
       style={{
         transform: `translate(${x}px, ${y}px)`,
         transition: 'transform 0.1s ease-out',
         left: 0,
         top: 0,
         zIndex: 9999,
+        willChange: 'transform',
       }}
     >
       <svg

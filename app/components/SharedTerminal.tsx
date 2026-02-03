@@ -103,7 +103,7 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
       // Initial size
       try {
         fit.fit()
-      } catch {}
+      } catch { }
 
       termRef.current = term
       fitRef.current = fit
@@ -111,7 +111,7 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
       return () => {
         try {
           term.dispose()
-        } catch {}
+        } catch { }
         termRef.current = null
         fitRef.current = null
       }
@@ -167,12 +167,12 @@ const SharedTerminal = forwardRef<SharedTerminalHandle, Props>(
       return () => {
         try {
           socket.emit('terminal:leave', roomId)
-        } catch {}
+        } catch { }
 
         try {
           socket.removeAllListeners()
           socket.disconnect()
-        } catch {}
+        } catch { }
 
         socketRef.current = null
         setConnected(false)
