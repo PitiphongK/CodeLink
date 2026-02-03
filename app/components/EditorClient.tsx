@@ -945,60 +945,92 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         onToggleOverlay={() => setOverlayActive((s) => !s)}
       />
       <div className="flex flex-1 overflow-hidden">
-        <PanelGroup
-          ref={hGroupRef}
-          direction="horizontal"
-          onLayout={handleHLayoutChange}
-        >
-          <Panel collapsible={true} collapsedSize={0} minSize={10}>
-            <PanelGroup
-              ref={vGroupRef}
-              direction="vertical"
-              onLayout={handleVLayoutChange}
-            >
-              <Panel>
-                <div className="flex-1 relative h-full">
-                  <Editor
-                    height="100%"
-                    language={language}
-                    theme={monacoTheme}
-                    options={MONACO_EDITOR_OPTIONS}
-                    onMount={handleMount}
-                  />
-                  <EditorOverlayDrawing
-                    ydoc={ydocRef.current}
-                    active={overlayActive}
-                    tool={drawingTool}
-                  />
-                  <LanguageSelector
-                    language={language}
-                    onLanguageChange={handleLanguageChange}
-                    disabled={myRole === 'navigator'}
-                  />
-                </div>
-              </Panel>
-              <PanelResizeHandle
-                disabled={myRole === 'navigator'}
-                className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
-              />
-              <Panel
-                collapsible={true}
-                collapsedSize={0}
-                minSize={10}
-                className="bg-surface-primary flex flex-col"
+        {/* Desktop: horizontal layout (editor/terminal | drawing) */}
+        <div className="hidden md:flex flex-1">
+          <PanelGroup
+            ref={hGroupRef}
+            direction="horizontal"
+            onLayout={handleHLayoutChange}
+          >
+            <Panel collapsible={true} collapsedSize={0} minSize={10}>
+              <PanelGroup
+                ref={vGroupRef}
+                direction="vertical"
+                onLayout={handleVLayoutChange}
               >
-                <TerminalPanel ref={terminalRef} roomId={roomId} />
-              </Panel>
-            </PanelGroup>
-          </Panel>
-          <PanelResizeHandle
-            disabled={myRole === 'navigator'}
-            className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
-          />
-          <Panel collapsible={true} collapsedSize={0} minSize={10}>
+                <Panel>
+                  <div className="flex-1 relative h-full">
+                    <Editor
+                      height="100%"
+                      language={language}
+                      theme={monacoTheme}
+                      options={MONACO_EDITOR_OPTIONS}
+                      onMount={handleMount}
+                    />
+                    <EditorOverlayDrawing
+                      ydoc={ydocRef.current}
+                      active={overlayActive}
+                      tool={drawingTool}
+                    />
+                    <LanguageSelector
+                      language={language}
+                      onLanguageChange={handleLanguageChange}
+                      disabled={myRole === 'navigator'}
+                    />
+                  </div>
+                </Panel>
+                <PanelResizeHandle
+                  disabled={myRole === 'navigator'}
+                  className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+                />
+                <Panel
+                  collapsible={true}
+                  collapsedSize={0}
+                  minSize={10}
+                  className="bg-surface-primary flex flex-col"
+                >
+                  <TerminalPanel ref={terminalRef} roomId={roomId} />
+                </Panel>
+              </PanelGroup>
+            </Panel>
+            <PanelResizeHandle
+              disabled={myRole === 'navigator'}
+              className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+            />
+            <Panel collapsible={true} collapsedSize={0} minSize={10}>
+              <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
+            </Panel>
+          </PanelGroup>
+        </div>
+
+        {/* Mobile: vertical layout (editor, terminal, drawing stacked) */}
+        <div className="flex flex-col flex-1 md:hidden overflow-auto">
+          <div className="flex-1 relative min-h-[200px]">
+            <Editor
+              height="100%"
+              language={language}
+              theme={monacoTheme}
+              options={MONACO_EDITOR_OPTIONS}
+              onMount={handleMount}
+            />
+            <EditorOverlayDrawing
+              ydoc={ydocRef.current}
+              active={overlayActive}
+              tool={drawingTool}
+            />
+            <LanguageSelector
+              language={language}
+              onLanguageChange={handleLanguageChange}
+              disabled={myRole === 'navigator'}
+            />
+          </div>
+          <div className="h-48 bg-surface-primary border-t border-border-strong">
+            <TerminalPanel ref={terminalRef} roomId={roomId} />
+          </div>
+          <div className="h-64 border-t border-border-strong">
             <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
-          </Panel>
-        </PanelGroup>
+          </div>
+        </div>
       </div>
     </div>
   )

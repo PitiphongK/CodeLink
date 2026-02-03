@@ -1,10 +1,8 @@
-import React from "react";
-
-export const Logo = ({ className = "w-40 h-auto" }: { className?: string }) => {
+export const Logo = ({ className = "w-30 h-auto" }: { className?: string }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 400 100"
+      viewBox="0 0 300 100"
       className={className}
       aria-label="PairDev Logo"
     >
@@ -16,7 +14,7 @@ export const Logo = ({ className = "w-40 h-auto" }: { className?: string }) => {
       </defs>
 
       {/* ICON: The Interlocking Brackets */}
-      <g transform="translate(20, 15) scale(0.7)">
+      <g transform="translate(55, 24) scale(0.5)">
         <path
           d="M20 10 L60 50 L20 90"
           fill="none"
@@ -38,17 +36,14 @@ export const Logo = ({ className = "w-40 h-auto" }: { className?: string }) => {
 
       {/* TEXT: PairDev */}
       <text
-        x="90"
+        x="110"
         y="62"
-        fontSize="48"
+        fontSize="36"
         fill="currentColor" // Uses text color (works in dark mode)
       >
         <tspan fontWeight="700">Pair</tspan>
         <tspan fontWeight="700">Dev</tspan>
       </text>
-
-      {/* Dot accent */}
-      <circle cx="285" cy="62" r="5" fill="url(#techGradient)" />
     </svg>
   );
 };

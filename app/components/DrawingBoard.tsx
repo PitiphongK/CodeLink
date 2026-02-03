@@ -112,6 +112,7 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
         width: '100%',
         height: '100%',
         backgroundColor: '#ffffff',
+        cursor: 'crosshair',
       }}
     >
       {points && <path d={pathData} />}

@@ -280,7 +280,7 @@ export default function Toolbar({
       <div className="bg-surface-primary border-b border-border-strong">
         {/* Top row: hamburger menu, desktop menus, run button centered, desktop right items */}
         <div className="flex items-center justify-between px-4 py-2 h-12">
-          {/* Left: Hamburger Menu + Desktop File/Help */}
+          {/* Left: Hamburger Menu + Logo + Desktop File/Help */}
           <div className="flex items-center gap-2">
             <Button
               isIconOnly
@@ -290,6 +290,42 @@ export default function Toolbar({
             >
               <Menu size={20} />
             </Button>
+
+            {/* Logo - links to home */}
+            <a href="/" className="flex items-center" title="Go to Home">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 100 100"
+                className="w-6 h-6"
+                aria-label="PairDev"
+              >
+                <defs>
+                  <linearGradient id="toolbarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#4F46E5" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#06B6D4" stopOpacity="1" />
+                  </linearGradient>
+                </defs>
+                <g transform="translate(5, 5) scale(1)">
+                  <path
+                    d="M20 10 L60 50 L20 90"
+                    fill="none"
+                    stroke="url(#toolbarGradient)"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M70 10 L30 50 L70 90"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.9"
+                  />
+                </g>
+              </svg>
+            </a>
 
             {/* Desktop only: File dropdown */}
             <div className="hidden md:flex items-center gap-2">

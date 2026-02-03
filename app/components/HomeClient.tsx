@@ -130,7 +130,7 @@ export default function HomeClient() {
               if (!userName.trim()) setUserName(generateRandomUserName())
               setStep('create-name')
             }}
-            className="w-full mt-auto"
+            className="w-full"
           >
             Create
           </Button>
@@ -182,7 +182,7 @@ export default function HomeClient() {
   return (
     <main>
       <div className="min-h-screen flex flex-col items-center py-8 px-4">
-        <div className="mb-20 text-2xl">
+        <div className="mb-20 text-2xl flex justify-center">
           <Logo className="w-64 h-auto text-gray-900 dark:text-white" />
         </div>
 

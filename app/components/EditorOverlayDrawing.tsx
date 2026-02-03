@@ -110,7 +110,7 @@ export default function EditorOverlayDrawing({
     <div className="absolute inset-0 pointer-events-none z-30">
       {/* Drawing stage. When inactive we set pointer-events none so editor remains usable. */}
       <div
-        className={`absolute inset-0 z-30 ${active ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`absolute inset-0 z-30 ${active ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
       >
         <Stage
           width={size.w}
