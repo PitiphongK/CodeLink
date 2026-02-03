@@ -6,16 +6,17 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
+  Tooltip,
 } from '@heroui/react'
 import {
   Eraser,
   Github,
-  Link2,
+  Share2,
   Menu,
   Navigation,
   Pen,
   PenOff,
-  PieChart,
+  BarChart2,
   Play,
   Settings,
   X,
@@ -86,9 +87,8 @@ export default function Toolbar({
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 transform transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
@@ -171,7 +171,7 @@ export default function Toolbar({
                   }
                 }}
               >
-                <Link2 size={16} />
+                <Share2 size={16} />
                 <span className="text-sm">Invite</span>
               </Button>
               <Button
@@ -213,7 +213,7 @@ export default function Toolbar({
                   }
                 }}
               >
-                <PieChart size={16} />
+                <BarChart2 size={16} />
                 <span className="text-sm">Analytics</span>
               </Button>
               <Button
@@ -354,23 +354,28 @@ export default function Toolbar({
 
           {/* Right: Desktop Invite, Analytics */}
           <div className="hidden md:flex items-center gap-2">
-            <Button
-              className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
-              size="sm"
-              onPress={onManageRoles}
-            >
-              <Link2 size={16} />
-              <span className="text-sm">Invite</span>
-            </Button>
-            <Button
-              isIconOnly
-              className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
-              size="sm"
-              onPress={onOpenAnalytics}
-              aria-label="Open analytics"
-            >
-              <PieChart size={16} />
-            </Button>
+            <Tooltip content="Invite & Share">
+              <Button
+                isIconOnly
+                className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
+                size="sm"
+                onPress={onManageRoles}
+                aria-label="Invite & Share"
+              >
+                <Share2 size={16} />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Analytics">
+              <Button
+                isIconOnly
+                className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
+                size="sm"
+                onPress={onOpenAnalytics}
+                aria-label="Analytics"
+              >
+                <BarChart2 size={16} />
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>

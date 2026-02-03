@@ -145,7 +145,7 @@ export default function HomeClient() {
         className="w-full"
         onSubmit={(e) => {
           e.preventDefault()
-          ;(isJoining ? handleJoinRoom : handleCreateRoom)()
+            ; (isJoining ? handleJoinRoom : handleCreateRoom)()
         }}
       >
         <h2 className="text-2xl font-semibold mb-1">What&apos;s your name?</h2>
