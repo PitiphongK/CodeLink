@@ -387,7 +387,6 @@ export default function Toolbar({
                 variant="flat"
                 color="primary"
                 className="hidden lg:inline-flex"
-                onClose={onToggleFollow}
               >
                 Following {followingName ?? 'driver'}
               </Chip>
@@ -395,7 +394,7 @@ export default function Toolbar({
             <Tooltip content={followEnabled ? `Unfollow ${followingName ?? 'driver'}` : `Follow ${followingName ?? 'driver'}`}>
               <Button
                 isIconOnly
-                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled ? 'bg-primary\/20 hover:bg-primary\/50 text-primary-600' : ''}`}
+                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled ? 'bg-blue-accent text-white' : ''}`}
                 size="sm"
                 onPress={onToggleFollow}
                 aria-label={followEnabled ? 'Unfollow driver' : 'Follow driver'}

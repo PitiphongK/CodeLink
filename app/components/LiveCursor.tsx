@@ -25,7 +25,7 @@ const LiveCursor = ({ x, y, color, name }: Props) => {
         transition: 'transform 0.1s ease-out',
         left: 0,
         top: 0,
-        zIndex: 9999,
+        zIndex: 1,
         willChange: 'transform',
       }}
     >

@@ -48,7 +48,7 @@ export const Logo = ({ className = "w-30 h-auto" }: { className?: string }) => {
   );
 };
 
-export const LogoIcon = ({ className = "w-8 h-8" }: { className?: string }) => {
+export const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -64,7 +64,7 @@ export const LogoIcon = ({ className = "w-8 h-8" }: { className?: string }) => {
       </defs>
 
       {/* ICON: The Interlocking Brackets */}
-      <g transform="translate(5, 5) scale(1)">
+      <g transform="translate(10, 10) scale(0.8)">
         <path
           d="M20 10 L60 50 L20 90"
           fill="none"
