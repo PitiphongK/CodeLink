@@ -6,6 +6,7 @@
 :root {
   --background: #f6f5f3;
   --foreground: #1f1e24;
+  --color-blue-accent: #d0eaff;
   --color-surface-primary: #f3f3f3;
   --color-surface-secondary: #ececec;
   --color-surface-elevated: #e0e0e0;
@@ -19,6 +20,7 @@
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --color-blue-accent: #114d88;
   --color-surface-primary: #1b1b1b;
   --color-surface-secondary: #2c2c2c;
   --color-surface-elevated: #404040;
@@ -40,6 +42,7 @@
   --color-btn-border: var(--color-btn-border);
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
+  --color-blue-accent: var(--color-blue-accent);
   --font-sans: var(--font-roboto);
   --font-mono: var(--font-roboto-mono);
 }

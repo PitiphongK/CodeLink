@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 
 import {
   Button,
+  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -67,6 +68,7 @@ export default function Toolbar({
   myRole,
   followEnabled = true,
   onToggleFollow,
+  followingName,
   drawingTool,
   onChangeDrawingTool,
   overlayActive,
@@ -379,10 +381,21 @@ export default function Toolbar({
 
           {/* Right: Desktop Invite, Analytics */}
           <div className="hidden md:flex items-center gap-2">
-            <Tooltip content={followEnabled ? 'Unfollow driver' : 'Follow driver'}>
+            {canToggleFollow && followEnabled ? (
+              <Chip
+                size="sm"
+                variant="flat"
+                color="primary"
+                className="hidden lg:inline-flex"
+                onClose={onToggleFollow}
+              >
+                Following {followingName ?? 'driver'}
+              </Chip>
+            ) : null}
+            <Tooltip content={followEnabled ? `Unfollow ${followingName ?? 'driver'}` : `Follow ${followingName ?? 'driver'}`}>
               <Button
                 isIconOnly
-                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border ${followEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled ? 'bg-primary\/20 hover:bg-primary\/50 text-primary-600' : ''}`}
                 size="sm"
                 onPress={onToggleFollow}
                 aria-label={followEnabled ? 'Unfollow driver' : 'Follow driver'}
