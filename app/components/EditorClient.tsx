@@ -101,6 +101,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT)
   const languageRef = useRef<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
+  const [followEnabled, setFollowEnabled] = useState(true)
   const [running, setRunning] = useState(false)
   const terminalRef = useRef<SharedTerminalHandle | null>(null)
 
@@ -170,6 +171,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   } = usePanelLayout({
     panelsMapRef,
     myRole,
+    followEnabled,
   })
 
   const {
@@ -505,6 +507,30 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     onTargetGone: () => setFollowing(null),
   })
 
+  const getDriverIdStr = useCallback(() => {
+    const rolesMap = rolesMapRef.current
+    if (!rolesMap) return null
+    const driverEntry = userStates.find(
+      ([cid]) => rolesMap.get(cid.toString()) === 'driver'
+    )
+    return driverEntry ? driverEntry[0].toString() : null
+  }, [userStates])
+
+  const handleToggleFollow = useCallback(() => {
+    const canFollow = myRole === 'navigator' || myRole === 'none'
+    if (!canFollow) return
+
+    const next = !followEnabled
+    setFollowEnabled(next)
+    if (!next) {
+      if (following) setFollowing(null)
+      return
+    }
+
+    const driverIdStr = getDriverIdStr()
+    if (driverIdStr) setFollowing(driverIdStr)
+  }, [myRole, followEnabled, following, getDriverIdStr])
+
   /** Enforce roles: driver can edit, navigator is read-only and auto-follows driver */
   useEffect(() => {
     const editor = editorRef.current
@@ -521,22 +547,17 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const isNavigator = role === 'navigator'
     editor.updateOptions({ readOnly: isNavigator })
 
-    // Find current driver and follow if navigator
-    if (isNavigator) {
-      // Find first driver among known users
-      const states = userStates
-      const driverEntry = states.find(
-        ([cid]) => rolesMap.get(cid.toString()) === 'driver'
-      )
-      if (driverEntry) {
-        const driverIdStr = driverEntry[0].toString()
-        if (following !== driverIdStr) setFollowing(driverIdStr)
-      }
-    } else {
-      // If not navigator and currently following, stop following
-      if (following) setFollowing(null)
+    const canFollow = role === 'navigator' || role === 'none'
+
+    // Follow driver only if follow is enabled
+    if (canFollow && followEnabled) {
+      const driverIdStr = getDriverIdStr()
+      if (driverIdStr && following !== driverIdStr) setFollowing(driverIdStr)
+    } else if (following) {
+      // Stop following when disabled or role isn't allowed
+      setFollowing(null)
     }
-  }, [userStates, following])
+  }, [userStates, following, followEnabled, getDriverIdStr])
 
   /**
    * Auto-assign roles: owner is driver, everyone else is navigator.
@@ -939,6 +960,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         }}
         isOwner={isOwner}
         myRole={myRole}
+        followEnabled={followEnabled}
+        onToggleFollow={handleToggleFollow}
         drawingTool={drawingTool}
         onChangeDrawingTool={setDrawingTool}
         overlayActive={overlayActive}

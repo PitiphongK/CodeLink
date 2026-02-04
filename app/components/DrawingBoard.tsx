@@ -18,7 +18,7 @@ interface DrawingBoardProps {
 function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const { points, startStroke, updateStroke, finishStroke } = useStroke()
-  const { strokes, addStroke} = useStrokes(ydoc)
+  const { strokes, addStroke } = useStrokes(ydoc)
 
   /*
   Must convert cursor absolute coordinate to a shared svg coordinate before broadcast
@@ -37,9 +37,9 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
         point.matrixTransform(ctm.inverse())
       )
     }
-    return {x, y}
+    return { x, y }
   }
-  
+
   const mapSvgCoordinateToScreen = (x: number, y: number) => {
     const svg = svgRef.current
     if (!svg) return { x, y }
@@ -60,7 +60,7 @@ function DrawingBoard({ ydoc, tool }: DrawingBoardProps) {
       e.currentTarget.setPointerCapture(e.pointerId)
       const rect = e.currentTarget.getBoundingClientRect()
       const point = mapScreenToSvgCoordinate(e.clientX, e.clientY)
-      startStroke(point.x , point.y, e.pressure)
+      startStroke(point.x, point.y, e.pressure)
     },
     [startStroke] // includes any component scope props, states, variables, *function (in this case) used inside this function
   )

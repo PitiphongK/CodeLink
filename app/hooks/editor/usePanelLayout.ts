@@ -20,6 +20,8 @@ interface UsePanelLayoutOptions {
   panelsMapRef: React.RefObject<Y.Map<unknown> | null>
   /** Current user's role (only driver can sync layouts) */
   myRole: AwarenessRole
+  /** Whether follow mode is enabled (for navigators) */
+  followEnabled?: boolean
 }
 
 interface UsePanelLayoutReturn {
@@ -51,12 +53,24 @@ interface UsePanelLayoutReturn {
 export function usePanelLayout({
   panelsMapRef,
   myRole,
+  followEnabled = true,
 }: UsePanelLayoutOptions): UsePanelLayoutReturn {
   const [hLayout, setHLayout] = useState<number[] | null>(null)
   const [vLayout, setVLayout] = useState<number[] | null>(null)
   const hGroupRef = useRef<ImperativePanelGroupHandle | null>(null)
   const vGroupRef = useRef<ImperativePanelGroupHandle | null>(null)
   const layoutDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  const myRoleRef = useRef(myRole)
+  const followEnabledRef = useRef(followEnabled)
+
+  // Keep refs in sync
+  useEffect(() => {
+    myRoleRef.current = myRole
+  }, [myRole])
+
+  useEffect(() => {
+    followEnabledRef.current = followEnabled
+  }, [followEnabled])
 
   // Initialize panel defaults
   const initializePanelDefaults = useCallback(() => {
@@ -123,7 +137,9 @@ export function usePanelLayout({
 
   // Apply layout updates to panel groups
   useEffect(() => {
-    if (hLayout && hGroupRef.current) {
+    // Only apply layout changes if driver or following is enabled
+    const shouldApply = myRoleRef.current === 'driver' || followEnabledRef.current
+    if (hLayout && hGroupRef.current && shouldApply) {
       try {
         hGroupRef.current.setLayout(hLayout)
       } catch { }
@@ -131,7 +147,9 @@ export function usePanelLayout({
   }, [hLayout])
 
   useEffect(() => {
-    if (vLayout && vGroupRef.current) {
+    // Only apply layout changes if driver or following is enabled
+    const shouldApply = myRoleRef.current === 'driver' || followEnabledRef.current
+    if (vLayout && vGroupRef.current && shouldApply) {
       try {
         vGroupRef.current.setLayout(vLayout)
       } catch { }

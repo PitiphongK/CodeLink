@@ -21,8 +21,10 @@ import {
   Settings,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 
 import type { AwarenessState } from '@/app/interfaces/awareness'
+import { LogoIcon } from '@/app/components/Logo'
 
 interface Props {
   onImport?: (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -41,6 +43,8 @@ interface Props {
   onLeaveSession?: () => void
   isOwner?: boolean
   myRole?: 'driver' | 'navigator' | 'none'
+  followEnabled?: boolean
+  onToggleFollow?: () => void
   drawingTool?: 'pen' | 'eraser'
   onChangeDrawingTool?: (tool: 'pen' | 'eraser') => void
   overlayActive?: boolean
@@ -61,6 +65,8 @@ export default function Toolbar({
   onLeaveSession,
   isOwner,
   myRole,
+  followEnabled = true,
+  onToggleFollow,
   drawingTool,
   onChangeDrawingTool,
   overlayActive,
@@ -68,6 +74,7 @@ export default function Toolbar({
   onGitHubImport,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const canToggleFollow = myRole === 'navigator' || myRole === 'none'
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {
@@ -160,6 +167,19 @@ export default function Toolbar({
             {/* Tools Section */}
             <div className="py-2">
               <p className="text-xs text-gray-500 px-3 mb-2">TOOLS</p>
+              <Button
+                className={`w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary md:hidden ${followEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                size="sm"
+                onPress={() => {
+                  if (canToggleFollow) onToggleFollow?.()
+                }}
+                isDisabled={!canToggleFollow}
+              >
+                <Navigation size={16} />
+                <span className="text-sm">
+                  {followEnabled ? 'Unfollow Driver' : 'Follow Driver'}
+                </span>
+              </Button>
               {/* Invite - Mobile only */}
               <Button
                 className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary md:hidden"
@@ -280,7 +300,7 @@ export default function Toolbar({
       <div className="bg-surface-primary border-b border-border-strong">
         {/* Top row: hamburger menu, desktop menus, run button centered, desktop right items */}
         <div className="flex items-center justify-between px-4 py-2 h-12">
-          {/* Left: Hamburger Menu + Logo + Desktop File/Help */}
+          {/* Left: Hamburger Menu + Desktop File/Help */}
           <div className="flex items-center gap-2">
             <Button
               isIconOnly
@@ -291,41 +311,10 @@ export default function Toolbar({
               <Menu size={20} />
             </Button>
 
-            {/* Logo - links to home */}
-            <a href="/" className="flex items-center" title="Go to Home">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 100 100"
-                className="w-6 h-6"
-                aria-label="PairDev"
-              >
-                <defs>
-                  <linearGradient id="toolbarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#4F46E5" stopOpacity="1" />
-                    <stop offset="100%" stopColor="#06B6D4" stopOpacity="1" />
-                  </linearGradient>
-                </defs>
-                <g transform="translate(5, 5) scale(1)">
-                  <path
-                    d="M20 10 L60 50 L20 90"
-                    fill="none"
-                    stroke="url(#toolbarGradient)"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M70 10 L30 50 L70 90"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.9"
-                  />
-                </g>
-              </svg>
-            </a>
+            {/* Logo */}
+            <Link href="/" className="hidden md:block">
+              <LogoIcon className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity" />
+            </Link>
 
             {/* Desktop only: File dropdown */}
             <div className="hidden md:flex items-center gap-2">
@@ -390,6 +379,18 @@ export default function Toolbar({
 
           {/* Right: Desktop Invite, Analytics */}
           <div className="hidden md:flex items-center gap-2">
+            <Tooltip content={followEnabled ? 'Unfollow driver' : 'Follow driver'}>
+              <Button
+                isIconOnly
+                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border ${followEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                size="sm"
+                onPress={onToggleFollow}
+                aria-label={followEnabled ? 'Unfollow driver' : 'Follow driver'}
+                isDisabled={!canToggleFollow}
+              >
+                <Navigation size={16} />
+              </Button>
+            </Tooltip>
             <Tooltip content="Invite & Share">
               <Button
                 isIconOnly
