@@ -10,7 +10,6 @@ import {
   Tooltip,
 } from '@heroui/react'
 import {
-  Eraser,
   Github,
   Share2,
   Menu,
@@ -46,8 +45,6 @@ interface Props {
   myRole?: 'driver' | 'navigator' | 'none'
   followEnabled?: boolean
   onToggleFollow?: () => void
-  drawingTool?: 'pen' | 'eraser'
-  onChangeDrawingTool?: (tool: 'pen' | 'eraser') => void
   overlayActive?: boolean
   onToggleOverlay?: () => void
   onGitHubImport?: () => void
@@ -69,8 +66,6 @@ export default function Toolbar({
   followEnabled = true,
   onToggleFollow,
   followingName,
-  drawingTool,
-  onChangeDrawingTool,
   overlayActive,
   onToggleOverlay,
   onGitHubImport,
@@ -207,22 +202,6 @@ export default function Toolbar({
               >
                 {overlayActive ? <Pen size={16} /> : <PenOff size={16} />}
                 <span className="text-sm">Drawing Overlay</span>
-              </Button>
-              <Button
-                className={`w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary ${drawingTool === 'pen' ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
-                size="sm"
-                onPress={() => onChangeDrawingTool?.('pen')}
-              >
-                <Pen size={16} />
-                <span className="text-sm">Pen</span>
-              </Button>
-              <Button
-                className={`w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary ${drawingTool === 'eraser' ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
-                size="sm"
-                onPress={() => onChangeDrawingTool?.('eraser')}
-              >
-                <Eraser size={16} />
-                <span className="text-sm">Eraser</span>
               </Button>
               {/* Analytics - Mobile only */}
               <Button

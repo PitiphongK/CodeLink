@@ -962,8 +962,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         myRole={myRole}
         followEnabled={followEnabled}
         onToggleFollow={handleToggleFollow}
-        drawingTool={drawingTool}
-        onChangeDrawingTool={setDrawingTool}
         overlayActive={overlayActive}
         onToggleOverlay={() => setOverlayActive((s) => !s)}
       />
@@ -1021,7 +1019,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
             />
             <Panel collapsible={true} collapsedSize={0} minSize={10}>
-              <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
+              <DrawingBoard
+                ydoc={ydocRef.current}
+                tool={drawingTool}
+                onToolChange={setDrawingTool}
+              />
             </Panel>
           </PanelGroup>
         </div>
@@ -1051,7 +1053,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
             <TerminalPanel ref={terminalRef} roomId={roomId} />
           </div>
           <div className="h-64 border-t border-border-strong">
-            <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
+            <DrawingBoard
+              ydoc={ydocRef.current}
+              tool={drawingTool}
+              onToolChange={setDrawingTool}
+            />
           </div>
         </div>
       </div>
