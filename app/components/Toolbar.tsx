@@ -14,8 +14,6 @@ import {
   Share2,
   Menu,
   Navigation,
-  Pen,
-  PenOff,
   BarChart2,
   Play,
   Settings,
@@ -45,8 +43,6 @@ interface Props {
   myRole?: 'driver' | 'navigator' | 'none'
   followEnabled?: boolean
   onToggleFollow?: () => void
-  overlayActive?: boolean
-  onToggleOverlay?: () => void
   onGitHubImport?: () => void
 }
 
@@ -66,8 +62,6 @@ export default function Toolbar({
   followEnabled = true,
   onToggleFollow,
   followingName,
-  overlayActive,
-  onToggleOverlay,
   onGitHubImport,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -119,7 +113,7 @@ export default function Toolbar({
             />
 
             {/* File Section - Mobile only */}
-            <div className="py-2 md:hidden">
+            <div className="py-2">
               <p className="text-xs text-gray-500 px-3 mb-2">FILE</p>
               <Button
                 className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
@@ -190,18 +184,6 @@ export default function Toolbar({
               >
                 <Share2 size={16} />
                 <span className="text-sm">Invite</span>
-              </Button>
-              <Button
-                className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
-                size="sm"
-                onPress={() => {
-                  if (onToggleOverlay) {
-                    onToggleOverlay()
-                  }
-                }}
-              >
-                {overlayActive ? <Pen size={16} /> : <PenOff size={16} />}
-                <span className="text-sm">Drawing Overlay</span>
               </Button>
               {/* Analytics - Mobile only */}
               <Button
@@ -278,7 +260,7 @@ export default function Toolbar({
         </div>
       </div>
 
-      <div className="bg-surface-primary border-b border-border-strong">
+      <div className="bg-surface-primary">
         {/* Top row: hamburger menu, desktop menus, run button centered, desktop right items */}
         <div className="flex items-center justify-between px-4 py-2 h-12">
           {/* Left: Hamburger Menu + Desktop File/Help */}
@@ -293,12 +275,12 @@ export default function Toolbar({
             </Button>
 
             {/* Logo */}
-            <Link href="/" className="hidden md:block">
+            {/* <Link href="/" className="hidden md:block">
               <LogoIcon className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity" />
-            </Link>
+            </Link> */}
 
             {/* Desktop only: File dropdown */}
-            <div className="hidden md:flex items-center gap-2">
+            {/* <div className="hidden md:flex items-center gap-2">
               <input
                 id="toolbar-file-importer"
                 type="file"
@@ -342,7 +324,7 @@ export default function Toolbar({
                   <DropdownItem key="export">Export</DropdownItem>
                 </DropdownMenu>
               </Dropdown>
-            </div>
+            </div> */}
           </div>
 
           {/* Center: Run Button */}

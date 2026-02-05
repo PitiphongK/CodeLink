@@ -9,6 +9,7 @@ import {
 } from '@heroui/react'
 
 import { Languages, languageOptions } from '@/app/interfaces/languages'
+import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 interface LanguageSelectorProps {
   /** Currently selected language */
@@ -30,19 +31,6 @@ export default function LanguageSelector({
   disabled = false,
   className = '',
 }: LanguageSelectorProps) {
-  const getLanguageIcon = (value: Languages) => {
-    switch (value) {
-      case Languages.JAVASCRIPT:
-        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg" width="14" height="14" />
-      case Languages.TYPESCRIPT:
-        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="14" height="14" />
-      case Languages.PYTHON:
-        return <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" width="14" height="14" />
-      default:
-        return null
-    }
-  }
-
   return (
     <div
       className={`absolute bottom-4 right-4 z-10 ${className} ${disabled ? 'opacity-60 pointer-events-none' : ''

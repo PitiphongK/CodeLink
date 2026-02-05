@@ -25,6 +25,9 @@ interface DrawingBoardProps {
   ydoc: Y.Doc | null
   tool: 'pen' | 'eraser'
   onToolChange?: (tool: 'pen' | 'eraser') => void
+  backgroundColor?: string
+  className?: string
+  strokesArrayName?: string
 }
 
 type ColorType = '#000000' | '#ef4444' | '#22c55e' | '#3b82f6'
@@ -67,11 +70,10 @@ const ToolbarControls = ({
               type="button"
               draggable={false}
               onClick={() => onColorChange(color.value)}
-              className={`w-6 h-6 rounded-full border-2 transition-all ${color.tailwind} ${
-                selectedColor === color.value
+              className={`w-6 h-6 rounded-full border-2 transition-all ${color.tailwind} ${selectedColor === color.value
                   ? 'border-primary ring-2 ring-primary ring-offset-2'
                   : 'border-transparent hover:scale-110'
-              }`}
+                }`}
               aria-label={`Select ${color.label}`}
             />
           </Tooltip>
@@ -163,12 +165,12 @@ export const DrawingToolbar = (props: DrawingToolbarProps) => {
   )
 }
 
-function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
+function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, strokesArrayName = 'strokes' }: DrawingBoardProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const isDrawingRef = useRef(false)
   const isErasingRef = useRef(false)
   const { points, startStroke, updateStroke, finishStroke } = useStroke()
-  const { strokes, addStroke } = useStrokes(ydoc)
+  const { strokes, addStroke } = useStrokes(ydoc, strokesArrayName)
   const [selectedColor, setSelectedColor] = useState<ColorType>('#000000')
   const [brushSize, setBrushSize] = useState(12)
 
@@ -189,14 +191,14 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
         point.matrixTransform(ctm.inverse())
       )
     }
-    return {x, y}
+    return { x, y }
   }
-  
+
   // useCallback prevents unnecessary re-creating new handler functions so the memoize component dont get rerendered
   const eraseAtPoint = useCallback(
     (x: number, y: number) => {
       if (!ydoc) return
-      const yStrokes = ydoc.getArray<Stroke>('strokes')
+      const yStrokes = ydoc.getArray<Stroke>(strokesArrayName)
       if (yStrokes.length === 0) return
       const eraserRadius = Math.max(brushSize, 10)
 
@@ -278,7 +280,7 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
         })
       }
     },
-    [ydoc, brushSize]
+    [ydoc, brushSize, strokesArrayName]
   )
 
   const handlePointerDown = useCallback(
@@ -351,12 +353,12 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
 
   const handleClear = useCallback(() => {
     if (!ydoc) return
-    const yStrokes = ydoc.getArray<Stroke>('strokes')
+    const yStrokes = ydoc.getArray<Stroke>(strokesArrayName)
     if (yStrokes.length > 0) {
       yStrokes.delete(0, yStrokes.length)
     }
     finishStroke()
-  }, [ydoc, finishStroke])
+  }, [ydoc, finishStroke, strokesArrayName])
 
   const STROKE_OPTIONS = {
     size: brushSize,
@@ -367,8 +369,12 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
 
   const stroke = getStroke(points, STROKE_OPTIONS)
   const pathData = getSvgPathFromStroke(stroke)
+  const containerClassName = ['relative w-full h-full', className]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <div className="relative w-full h-full">
+    <div className={containerClassName}>
       <DrawingToolbar
         selectedTool={tool}
         onToolChange={(nextTool) => onToolChange?.(nextTool)}
@@ -391,13 +397,10 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
           touchAction: 'none',
           width: '100%',
           height: '100%',
-          backgroundColor: '#ffffff',
+          backgroundColor: backgroundColor ?? '#ffffff',
           cursor: tool === 'eraser' ? 'cell' : 'crosshair',
         }}
       >
-        {points && (
-          <path d={pathData} fill={selectedColor} stroke="none" />
-        )}
         {strokes.map((stroke) => {
           const strokeSize = stroke.thickness ?? 16
           const strokeColor = stroke.color ?? '#000000'
@@ -411,6 +414,9 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
             <path key={stroke.id} d={strokePath} fill={strokeColor} stroke="none" />
           )
         })}
+        {points && (
+          <path d={pathData} fill={selectedColor} stroke="none" />
+        )}
       </svg>
     </div>
   )

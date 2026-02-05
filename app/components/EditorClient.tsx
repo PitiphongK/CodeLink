@@ -6,6 +6,13 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels'
 
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from '@heroui/react'
 import { addToast } from '@heroui/toast'
 import Editor from '@monaco-editor/react'
 import { useTheme } from 'next-themes'
@@ -54,6 +61,8 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
+import { MoreHorizontal, Pen, PenOff, X } from 'lucide-react'
+import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 const LANGUAGE_VALUES = new Set(Object.values(Languages))
 const isValidLanguage = (value: unknown): value is Languages =>
@@ -79,6 +88,14 @@ const isValidLanguage = (value: unknown): value is Languages =>
 export default function EditorClient({ roomId }: EditorClientProps) {
   const { resolvedTheme } = useTheme()
   const monacoTheme = resolvedTheme === 'dark' ? 'vs-dark' : 'vs'
+
+  const editorTabs = [
+    {
+      id: 'main',
+      title: 'main',
+      isActive: true,
+    },
+  ]
 
   // ============================================================================
   // Refs - Yjs Integration
@@ -136,6 +153,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const [myRole, setMyRole] = useState<AwarenessRole>('none')
   const myRoleRef = useRef<AwarenessRole>('none')
   const [overlayActive, setOverlayActive] = useState(false)
+  const handleToggleOverlay = useCallback(() => {
+    setOverlayActive((prev) => !prev)
+  }, [])
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
 
   /** Sync language to room map (driver only) */
@@ -867,6 +887,64 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [handleExport, handleFileImport])
 
+  const renderEditorTabBar = () => (
+    <div className="flex items-center gap-2 h-10 min-h-10 bg-surface-primary">
+      <div className="flex flex-1 items-center gap-2 overflow-hidden">
+        {editorTabs.map((tab) => (
+          <Button
+            key={tab.id}
+            variant="flat"
+            size="sm"
+            className={`h-10 px-3 rounded-none transition-colors ${
+              tab.isActive
+                ? 'bg-surface-secondary text-text-primary'
+                : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
+            }`}
+            aria-current={tab.isActive ? 'page' : undefined}
+            aria-label={`${tab.title} tab`}
+          >
+            <div className="flex items-center gap-3 h-full">
+              {getLanguageIcon(language)}
+              <span className="text-sm tracking-wide">{tab.title}</span>
+              {tab.isActive && (
+                <span className="text-default-500">
+                  <X size={12} />
+                </span>
+              )}
+            </div>
+          </Button>
+        ))}
+      </div>
+      <Dropdown>
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            variant="flat"
+            size="sm"
+            className="mx-1 rounded-2xl border border-transparent bg-transparent text-text-secondary transition-colors hover:bg-surface-elevated"
+            aria-label="Drawing overlay options"
+          >
+            <MoreHorizontal size={16} />
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu aria-label="Drawing overlay options" selectionMode="none">
+          <DropdownItem
+            key="toggle-overlay"
+            onPress={handleToggleOverlay}
+            startContent={overlayActive ? <Pen size={16} /> : <PenOff size={16} />}
+            endContent={
+              <span className="text-xs uppercase text-default-500">
+                {overlayActive ? 'On' : 'Off'}
+              </span>
+            }
+          >
+            Drawing overlay
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+    </div>
+  )
+
   // ============================================================================
   // Render
   // ============================================================================
@@ -962,8 +1040,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         myRole={myRole}
         followEnabled={followEnabled}
         onToggleFollow={handleToggleFollow}
-        overlayActive={overlayActive}
-        onToggleOverlay={() => setOverlayActive((s) => !s)}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop: horizontal layout (editor/terminal | drawing) */}
@@ -980,24 +1056,28 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 onLayout={handleVLayoutChange}
               >
                 <Panel>
-                  <div className="flex-1 relative h-full">
-                    <Editor
-                      height="100%"
-                      language={language}
-                      theme={monacoTheme}
-                      options={MONACO_EDITOR_OPTIONS}
-                      onMount={handleMount}
-                    />
-                    <EditorOverlayDrawing
-                      ydoc={ydocRef.current}
-                      active={overlayActive}
-                      tool={drawingTool}
-                    />
-                    <LanguageSelector
-                      language={language}
-                      onLanguageChange={handleLanguageChange}
-                      disabled={myRole === 'navigator'}
-                    />
+                  <div className="flex flex-col h-full">
+                    {renderEditorTabBar()}
+                    <div className="flex-1 relative">
+                      <Editor
+                        height="100%"
+                        language={language}
+                        theme={monacoTheme}
+                        options={MONACO_EDITOR_OPTIONS}
+                        onMount={handleMount}
+                      />
+                      <EditorOverlayDrawing
+                        ydoc={ydocRef.current}
+                        active={overlayActive}
+                        tool={drawingTool}
+                        onToolChange={setDrawingTool}
+                      />
+                      <LanguageSelector
+                        language={language}
+                        onLanguageChange={handleLanguageChange}
+                        disabled={myRole === 'navigator'}
+                      />
+                    </div>
                   </div>
                 </Panel>
                 <PanelResizeHandle
@@ -1030,24 +1110,28 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
         {/* Mobile: vertical layout (editor, terminal, drawing stacked) */}
         <div className="flex flex-col flex-1 md:hidden overflow-auto">
-          <div className="flex-1 relative min-h-[200px]">
-            <Editor
-              height="100%"
-              language={language}
-              theme={monacoTheme}
-              options={MONACO_EDITOR_OPTIONS}
-              onMount={handleMount}
-            />
-            <EditorOverlayDrawing
-              ydoc={ydocRef.current}
-              active={overlayActive}
-              tool={drawingTool}
-            />
-            <LanguageSelector
-              language={language}
-              onLanguageChange={handleLanguageChange}
-              disabled={myRole === 'navigator'}
-            />
+          <div className="flex flex-col h-full overflow-hidden">
+            {renderEditorTabBar()}
+            <div className="flex-1 relative">
+              <Editor
+                height="100%"
+                language={language}
+                theme={monacoTheme}
+                options={MONACO_EDITOR_OPTIONS}
+                onMount={handleMount}
+              />
+              <EditorOverlayDrawing
+                ydoc={ydocRef.current}
+                active={overlayActive}
+                tool={drawingTool}
+                onToolChange={setDrawingTool}
+              />
+              <LanguageSelector
+                language={language}
+                onLanguageChange={handleLanguageChange}
+                disabled={myRole === 'navigator'}
+              />
+            </div>
           </div>
           <div className="h-48 bg-surface-primary border-t border-border-strong">
             <TerminalPanel ref={terminalRef} roomId={roomId} />
