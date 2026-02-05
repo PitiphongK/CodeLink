@@ -895,11 +895,10 @@ export default function EditorClient({ roomId }: EditorClientProps) {
             key={tab.id}
             variant="flat"
             size="sm"
-            className={`h-10 px-3 rounded-none transition-colors ${
-              tab.isActive
+            className={`h-10 px-3 rounded-none transition-colors ${tab.isActive
                 ? 'bg-surface-secondary text-text-primary'
                 : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
-            }`}
+              }`}
             aria-current={tab.isActive ? 'page' : undefined}
             aria-label={`${tab.title} tab`}
           >

@@ -71,8 +71,8 @@ const ToolbarControls = ({
               draggable={false}
               onClick={() => onColorChange(color.value)}
               className={`w-6 h-6 rounded-full border-2 transition-all ${color.tailwind} ${selectedColor === color.value
-                  ? 'border-primary ring-2 ring-primary ring-offset-2'
-                  : 'border-transparent hover:scale-110'
+                ? 'border-primary ring-2 ring-primary ring-offset-2'
+                : 'border-transparent hover:scale-110'
                 }`}
               aria-label={`Select ${color.label}`}
             />
