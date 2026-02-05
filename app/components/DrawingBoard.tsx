@@ -10,7 +10,7 @@ import {
   Slider,
   Tooltip,
 } from '@heroui/react'
-import { Minus, Palette, Pencil, Plus } from 'lucide-react'
+import { Eraser, Minus, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import { nanoid } from 'nanoid'
 import { getStroke } from 'perfect-freehand'
@@ -37,12 +37,13 @@ const COLORS: { value: ColorType; label: string; tailwind: string }[] = [
 ]
 
 type DrawingToolbarProps = {
-  selectedTool: 'pen'
-  onToolChange: (tool: 'pen') => void
+  selectedTool: 'pen' | 'eraser'
+  onToolChange: (tool: 'pen' | 'eraser') => void
   selectedColor: ColorType
   onColorChange: (color: ColorType) => void
   brushSize: number
   onBrushSizeChange: (size: number) => void
+  onClear: () => void
 }
 
 const ToolbarControls = ({
@@ -52,6 +53,7 @@ const ToolbarControls = ({
   onColorChange,
   brushSize,
   onBrushSizeChange,
+  onClear,
 }: DrawingToolbarProps) => {
   return (
     <div
@@ -103,6 +105,29 @@ const ToolbarControls = ({
             <Pencil size={16} />
           </Button>
         </Tooltip>
+        <Tooltip content="Eraser">
+          <Button
+            isIconOnly
+            size="sm"
+            variant={selectedTool === 'eraser' ? 'solid' : 'light'}
+            color={selectedTool === 'eraser' ? 'primary' : 'default'}
+            onPress={() => onToolChange('eraser')}
+          >
+            <Eraser size={16} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Clear all">
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            color="danger"
+            onPress={onClear}
+            aria-label="Clear all drawings"
+          >
+            <Trash2 size={16} />
+          </Button>
+        </Tooltip>
       </div>
     </div>
   )
@@ -141,6 +166,7 @@ export const DrawingToolbar = (props: DrawingToolbarProps) => {
 function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const isDrawingRef = useRef(false)
+  const isErasingRef = useRef(false)
   const { points, startStroke, updateStroke, finishStroke } = useStroke()
   const { strokes, addStroke } = useStrokes(ydoc)
   const [selectedColor, setSelectedColor] = useState<ColorType>('#000000')
@@ -167,29 +193,135 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
   }
   
   // useCallback prevents unnecessary re-creating new handler functions so the memoize component dont get rerendered
+  const eraseAtPoint = useCallback(
+    (x: number, y: number) => {
+      if (!ydoc) return
+      const yStrokes = ydoc.getArray<Stroke>('strokes')
+      if (yStrokes.length === 0) return
+      const eraserRadius = Math.max(brushSize, 10)
+
+      const distSqPointToSegment = (
+        px: number,
+        py: number,
+        x1: number,
+        y1: number,
+        x2: number,
+        y2: number
+      ) => {
+        const dx = x2 - x1
+        const dy = y2 - y1
+        if (dx === 0 && dy === 0) {
+          const sx = px - x1
+          const sy = py - y1
+          return sx * sx + sy * sy
+        }
+        const t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+        const clamped = Math.max(0, Math.min(1, t))
+        const cx = x1 + clamped * dx
+        const cy = y1 + clamped * dy
+        const sx = px - cx
+        const sy = py - cy
+        return sx * sx + sy * sy
+      }
+
+      const getPoint = (
+        pt: Stroke['points'][number]
+      ): { x: number; y: number } | null => {
+        if (Array.isArray(pt)) {
+          const px = pt[0]
+          const py = pt[1]
+          if (typeof px !== 'number' || typeof py !== 'number') return null
+          return { x: px, y: py }
+        }
+        if (typeof pt.x === 'number' && typeof pt.y === 'number') {
+          return { x: pt.x, y: pt.y }
+        }
+        return null
+      }
+
+      const isHit = (stroke: Stroke) => {
+        const strokeSize = stroke.thickness ?? brushSize
+        const hitRadius = eraserRadius + strokeSize / 2
+        const hitRadiusSq = hitRadius * hitRadius
+
+        const pts: { x: number; y: number }[] = []
+        for (const pt of stroke.points) {
+          const p = getPoint(pt)
+          if (p) pts.push(p)
+        }
+
+        if (pts.length === 0) return false
+        if (pts.length === 1) {
+          const dx = pts[0].x - x
+          const dy = pts[0].y - y
+          return dx * dx + dy * dy <= hitRadiusSq
+        }
+
+        for (let i = 0; i < pts.length - 1; i += 1) {
+          const a = pts[i]
+          const b = pts[i + 1]
+          const dSq = distSqPointToSegment(x, y, a.x, a.y, b.x, b.y)
+          if (dSq <= hitRadiusSq) return true
+        }
+
+        return false
+      }
+
+      const indices: number[] = []
+      yStrokes.toArray().forEach((stroke, idx) => {
+        if (isHit(stroke)) indices.push(idx)
+      })
+
+      if (indices.length > 0) {
+        indices.sort((a, b) => b - a).forEach((idx) => {
+          yStrokes.delete(idx, 1)
+        })
+      }
+    },
+    [ydoc, brushSize]
+  )
+
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (tool !== 'pen') return
       e.preventDefault()
       e.currentTarget.setPointerCapture(e.pointerId)
-      isDrawingRef.current = true
       const point = mapScreenToSvgCoordinate(e.clientX, e.clientY)
+
+      if (tool === 'eraser') {
+        isErasingRef.current = true
+        eraseAtPoint(point.x, point.y)
+        return
+      }
+
+      isDrawingRef.current = true
       startStroke(point.x, point.y, e.pressure)
     },
-    [startStroke, tool]
+    [eraseAtPoint, startStroke, tool]
   )
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDrawingRef.current) return
       const point = mapScreenToSvgCoordinate(e.clientX, e.clientY)
+
+      if (isErasingRef.current) {
+        eraseAtPoint(point.x, point.y)
+        return
+      }
+
+      if (!isDrawingRef.current) return
       updateStroke(point.x, point.y, e.pressure)
     },
-    [updateStroke]
+    [eraseAtPoint, updateStroke]
   )
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      if (isErasingRef.current) {
+        isErasingRef.current = false
+        e.currentTarget.releasePointerCapture(e.pointerId)
+        return
+      }
+
       if (!isDrawingRef.current) return
       isDrawingRef.current = false
       e.currentTarget.releasePointerCapture(e.pointerId)
@@ -208,13 +340,23 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
 
   const handlePointerCancel = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDrawingRef.current) return
+      if (!isDrawingRef.current && !isErasingRef.current) return
       isDrawingRef.current = false
+      isErasingRef.current = false
       e.currentTarget.releasePointerCapture(e.pointerId)
       finishStroke()
     },
     [finishStroke]
   )
+
+  const handleClear = useCallback(() => {
+    if (!ydoc) return
+    const yStrokes = ydoc.getArray<Stroke>('strokes')
+    if (yStrokes.length > 0) {
+      yStrokes.delete(0, yStrokes.length)
+    }
+    finishStroke()
+  }, [ydoc, finishStroke])
 
   const STROKE_OPTIONS = {
     size: brushSize,
@@ -228,12 +370,13 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
   return (
     <div className="relative w-full h-full">
       <DrawingToolbar
-        selectedTool="pen"
-        onToolChange={() => onToolChange?.('pen')}
+        selectedTool={tool}
+        onToolChange={(nextTool) => onToolChange?.(nextTool)}
         selectedColor={selectedColor}
         onColorChange={setSelectedColor}
         brushSize={brushSize}
         onBrushSizeChange={setBrushSize}
+        onClear={handleClear}
       />
       <svg
         ref={svgRef}
@@ -249,7 +392,7 @@ function DrawingBoard({ ydoc, tool, onToolChange }: DrawingBoardProps) {
           width: '100%',
           height: '100%',
           backgroundColor: '#ffffff',
-          cursor: 'crosshair',
+          cursor: tool === 'eraser' ? 'cell' : 'crosshair',
         }}
       >
         {points && (

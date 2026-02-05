@@ -233,7 +233,7 @@ export default function Toolbar({
             </div>
 
             {/* Help Section */}
-            <div className="py-2">
+            {/* <div className="py-2">
               <p className="text-xs text-gray-500 px-3 mb-2">HELP</p>
               <Button
                 className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
@@ -241,7 +241,7 @@ export default function Toolbar({
               >
                 <span className="text-sm">(To be implemented)</span>
               </Button>
-            </div>
+            </div> */}
 
             {/* Session Actions */}
             <div className="py-2 mt-auto">
