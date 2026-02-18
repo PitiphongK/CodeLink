@@ -63,8 +63,10 @@
     "eslint": "^9.39.2",
     "eslint-config-next": "15.5.4",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "lib0": "^0.2.117",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "ws": "^8.19.0"
   },
