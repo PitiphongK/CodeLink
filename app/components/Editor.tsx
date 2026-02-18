@@ -63,14 +63,6 @@ export default function EditorComponent({
           )
         }
       })
-
-      // Set initial value if the document is empty
-      if (ytext.length === 0) {
-        ytext.insert(
-          0,
-          `// Room: ${roomId}\nfunction add(a, b) { return a + b }\n`
-        )
-      }
     }
   }, [editorRef, ydoc, provider, roomId])
 

@@ -38,7 +38,6 @@ import {
   STORAGE_KEYS,
   YJS_KEYS,
   YJS_WEBSOCKET_URL,
-  getDefaultEditorContent,
 } from '@/app/constants/editor'
 import {
   useFileOperations,
@@ -718,11 +717,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const model = editor.getModel()
     if (model) {
       new MonacoBinding(ytext, model, new Set([editor]), provider.awareness)
-    }
-
-    // Set initial value if the document is empty
-    if (ytext.length === 0) {
-      ytext.insert(0, getDefaultEditorContent(roomId))
     }
   }
 

@@ -6,11 +6,13 @@ import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
 import * as map from 'lib0/map'
 
-const PORT = process.env.YJS_PORT ? parseInt(process.env.YJS_PORT) : 1234
+// Use PORT env var (set by Render/Railway), fallback to YJS_PORT or 1234
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : (process.env.YJS_PORT ? parseInt(process.env.YJS_PORT) : 1234)
 
 const wss = new WebSocketServer({ port: PORT })
 
-console.log(`Yjs WebSocket server running on ws://localhost:${PORT}`)
+const HOST = process.env.HOST || 'localhost'
+console.log(`Yjs WebSocket server running on ws://${HOST}:${PORT}`)
 
 // Map to store Yjs documents for each room
 const docs = new Map<string, WSSharedDoc>()
@@ -56,11 +58,10 @@ const messageListener = (conn: WebSocket, doc: WSSharedDoc, message: Uint8Array)
       case messageSync: {
         const encoder = encoding.createEncoder()
         encoding.writeVarUint(encoder, messageSync)
+        // readSyncMessage writes sync updates directly to the encoder
         syncProtocol.readSyncMessage(decoder, encoder, doc.doc, conn)
-        // Only send if there's an actual response (length > 1 means more than just the message type byte)
-        if (encoding.length(encoder) > 1) {
-          send(conn, encoder)
-        }
+        // Always send response, even if empty (needed for sync protocol handshake)
+        send(conn, encoder)
         break
       }
       case messageAwareness: {
@@ -71,6 +72,8 @@ const messageListener = (conn: WebSocket, doc: WSSharedDoc, message: Uint8Array)
         )
         break
       }
+      default:
+        console.warn(`Unknown message type: ${messageType}`)
     }
   } catch (err) {
     console.error('Error processing message:', err)
@@ -149,14 +152,16 @@ wss.on('connection', (conn: WebSocket, req) => {
   
   doc.awareness.on('change', awarenessChangeHandler)
   
-  // Broadcast document updates
+  // Broadcast document updates to all OTHER clients (not the origin)
   const updateHandler = (update: Uint8Array, origin: any) => {
     const encoder = encoding.createEncoder()
     encoding.writeVarUint(encoder, messageSync)
     syncProtocol.writeUpdate(encoder, update)
     
+    // Send to all connected clients except the one that made the change
     doc.conns.forEach((_, c) => {
-      if (c !== origin) {
+      // Only send to other connections (origin is the WebSocket that made the change)
+      if (c !== origin && c.readyState === WebSocket.OPEN) {
         send(c, encoder)
       }
     })
@@ -167,6 +172,10 @@ wss.on('connection', (conn: WebSocket, req) => {
   conn.on('message', (message: ArrayBuffer) =>
     messageListener(conn, doc, new Uint8Array(message))
   )
+
+  conn.on('error', (error) => {
+    console.error(`Connection error for room ${docName}:`, error)
+  })
   
   conn.on('close', () => {
     doc.awareness.off('change', awarenessChangeHandler)

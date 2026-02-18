@@ -8,7 +8,7 @@
 
 /** Yjs WebSocket server URL */
 export const YJS_WEBSOCKET_URL = 
-  process.env.NEXT_PUBLIC_YJS_WEBSOCKET_URL || 'wss://demos.yjs.dev/ws'
+  process.env.NEXT_PUBLIC_YJS_WEBSOCKET_URL || 'wss://pairdev-yjs.onrender.com'
 
 // ============================================================================
 // Storage Keys
