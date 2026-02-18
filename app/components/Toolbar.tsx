@@ -40,7 +40,7 @@ interface Props {
   onEndSession?: () => void
   onLeaveSession?: () => void
   isOwner?: boolean
-  myRole?: 'driver' | 'navigator' | 'none'
+  myRole?: 'driver' | 'navigator'
   followEnabled?: boolean
   onToggleFollow?: () => void
   onGitHubImport?: () => void
@@ -65,7 +65,7 @@ export default function Toolbar({
   onGitHubImport,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const canToggleFollow = myRole === 'navigator' || myRole === 'none'
+  const canToggleFollow = myRole === 'navigator'
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onImport) {

@@ -149,8 +149,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // ============================================================================
   // State - Role & Drawing
   // ============================================================================
-  const [myRole, setMyRole] = useState<AwarenessRole>('none')
-  const myRoleRef = useRef<AwarenessRole>('none')
+  const [myRole, setMyRole] = useState<AwarenessRole>('navigator')
+  const myRoleRef = useRef<AwarenessRole>('navigator')
   const [overlayActive, setOverlayActive] = useState(false)
   const handleToggleOverlay = useCallback(() => {
     setOverlayActive((prev) => !prev)
@@ -322,12 +322,18 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       setIsOwner(isCurrentUserOwner)
       isOwnerRef.current = isCurrentUserOwner
 
-      // Immediately assign roles after owner is determined
-      // Owner is driver, everyone else is navigator
+      // Assign initial roles if not already set
+      // Owner gets driver, others get navigator - but owner can change later
+      const existingRole = rolesMap.get(currentId.toString())
       const myInitialRole: AwarenessRole = isCurrentUserOwner ? 'driver' : 'navigator'
-      rolesMap.set(currentId.toString(), myInitialRole)
-      setMyRole(myInitialRole)
-      myRoleRef.current = myInitialRole
+      if (existingRole == null) {
+        rolesMap.set(currentId.toString(), myInitialRole)
+        setMyRole(myInitialRole)
+        myRoleRef.current = myInitialRole
+      } else {
+        setMyRole(existingRole)
+        myRoleRef.current = existingRole
+      }
 
       // Initialize or read shared language
       const sharedLanguage = roomMap.get(ROOM_MAP_KEYS.LANGUAGE)
@@ -536,7 +542,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   }, [userStates])
 
   const handleToggleFollow = useCallback(() => {
-    const canFollow = myRole === 'navigator' || myRole === 'none'
+    const canFollow = myRole === 'navigator'
     if (!canFollow) return
 
     const next = !followEnabled
@@ -566,7 +572,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const isNavigator = role === 'navigator'
     editor.updateOptions({ readOnly: isNavigator })
 
-    const canFollow = role === 'navigator' || role === 'none'
+    const canFollow = role === 'navigator'
 
     // Follow driver only if follow is enabled
     if (canFollow && followEnabled) {
@@ -613,7 +619,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       rolesMap.set(prevOwner.toString(), 'navigator')
     }
 
-    rolesMap.set(currentOwner.toString(), 'driver')
+    // Don't force owner to be driver - let them choose their own role
+    // (only assign driver role to new users without one)
 
     // Assign navigator role to any new users who don't have a role yet
     for (const cid of presentIds) {
@@ -965,7 +972,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         isOwner={isOwner}
         userStates={userStates}
         getRole={(clientId) =>
-          rolesMapRef.current?.get(clientId.toString()) ?? 'none'
+          rolesMapRef.current?.get(clientId.toString()) ?? 'navigator'
         }
         onSetRole={(clientId, role) => {
           if (!isOwner) return

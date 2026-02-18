@@ -51,6 +51,7 @@ const send = (conn: WebSocket, encoder: encoding.Encoder) => {
 
 const messageListener = (conn: WebSocket, doc: WSSharedDoc, message: Uint8Array) => {
   try {
+    if (message.byteLength === 0) return
     const decoder = decoding.createDecoder(message)
     const messageType = decoding.readVarUint(decoder)
     
@@ -60,8 +61,11 @@ const messageListener = (conn: WebSocket, doc: WSSharedDoc, message: Uint8Array)
         encoding.writeVarUint(encoder, messageSync)
         // readSyncMessage writes sync updates directly to the encoder
         syncProtocol.readSyncMessage(decoder, encoder, doc.doc, conn)
-        // Always send response, even if empty (needed for sync protocol handshake)
-        send(conn, encoder)
+        // Only send when response has payload. Sending a header-only frame
+        // makes y-websocket client throw "Unexpected end of array".
+        if (encoding.length(encoder) > 1) {
+          send(conn, encoder)
+        }
         break
       }
       case messageAwareness: {

@@ -23,11 +23,11 @@ import {
   TableRow,
   Tooltip,
 } from '@heroui/react'
-import { Check, Copy, Crown, MoreVertical } from 'lucide-react'
+import { Check, Copy, Crown, Info, MoreVertical } from 'lucide-react'
 
 import type { AwarenessState } from '@/app/interfaces/awareness'
 
-type Role = 'driver' | 'navigator' | 'none'
+type Role = 'driver' | 'navigator'
 
 type Props = {
   isOpen: boolean
@@ -89,7 +89,22 @@ export default function RolesModal({
               >
                 <TableHeader>
                   <TableColumn>NAME</TableColumn>
-                  <TableColumn width={200}>ROLE</TableColumn>
+                  <TableColumn width={200}>
+                    <div className="flex items-center gap-2">
+                      <span>ROLE</span>
+                      <Tooltip
+                        content={
+                          <div className="text-xs space-y-1">
+                            <div><span className="font-semibold">Driver:</span> Can edit code</div>
+                            <div><span className="font-semibold">Navigator:</span> Cannot edit, follows driver</div>
+                          </div>
+                        }
+                        delay={0}
+                      >
+                        <Info size={16} className="text-default-400 cursor-help" />
+                      </Tooltip>
+                    </div>
+                  </TableColumn>
                   <TableColumn align="center">ACTIONS</TableColumn>
                 </TableHeader>
                 <TableBody emptyContent="No participants">
@@ -134,7 +149,6 @@ export default function RolesModal({
                           >
                             <SelectItem key="driver">Driver</SelectItem>
                             <SelectItem key="navigator">Navigator</SelectItem>
-                            <SelectItem key="none">None</SelectItem>
                           </Select>
                         </TableCell>
                         <TableCell className="text-center">

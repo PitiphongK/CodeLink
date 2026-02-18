@@ -30,7 +30,7 @@ function getCopy(role: Role) {
         <div className="space-y-2 text-sm text-gray-500">
           <div>You can edit the code.</div>
           <div>
-            The Navigator (other users) will automatically follow your scroll.
+            The Navigator (other users) cannot edit and will automatically follow you.
           </div>
         </div>
       ),
@@ -43,9 +43,8 @@ function getCopy(role: Role) {
       <div className="space-y-2 text-sm text-gray-500">
         <div>You are in read-only mode (no editing).</div>
         <div>
-          You will automatically follow the Driver so you can review and guide.
+          You will automatically follow the Driver. 
         </div>
-        <div>You can ask the host to switch roles.</div>
       </div>
     ),
   }
