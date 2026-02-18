@@ -1,6 +1,6 @@
 
 'use client'
-import React, { memo, useCallback, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   Button,
@@ -170,9 +170,14 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
   const isDrawingRef = useRef(false)
   const isErasingRef = useRef(false)
   const { points, startStroke, updateStroke, finishStroke } = useStroke()
+  const pointsRef = useRef<number[][]>([])
   const { strokes, addStroke } = useStrokes(ydoc, strokesArrayName)
   const [selectedColor, setSelectedColor] = useState<ColorType>('#000000')
   const [brushSize, setBrushSize] = useState(12)
+
+  useEffect(() => {
+    pointsRef.current = points
+  }, [points])
 
   /*
   Must convert cursor absolute coordinate to a shared svg coordinate before broadcast
@@ -327,9 +332,14 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
       if (!isDrawingRef.current) return
       isDrawingRef.current = false
       e.currentTarget.releasePointerCapture(e.pointerId)
+      const latestPoints = pointsRef.current
+      if (latestPoints.length === 0) {
+        finishStroke()
+        return
+      }
       const stroke: Stroke = {
         id: nanoid(),
-        points: points,
+        points: latestPoints,
         user: 'placeholder',
         color: selectedColor,
         thickness: brushSize,
@@ -337,7 +347,7 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
       addStroke(stroke)
       finishStroke()
     },
-    [points, addStroke, finishStroke, selectedColor, brushSize]
+    [addStroke, finishStroke, selectedColor, brushSize]
   )
 
   const handlePointerCancel = useCallback(
@@ -349,6 +359,25 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
       finishStroke()
     },
     [finishStroke]
+  )
+
+  const handleLostPointerCapture = useCallback(
+    () => {
+      if (!isDrawingRef.current) return
+      isDrawingRef.current = false
+      const latestPoints = pointsRef.current
+      if (latestPoints.length > 0) {
+        addStroke({
+          id: nanoid(),
+          points: latestPoints,
+          user: 'placeholder',
+          color: selectedColor,
+          thickness: brushSize,
+        })
+      }
+      finishStroke()
+    },
+    [addStroke, finishStroke, selectedColor, brushSize]
   )
 
   const handleClear = useCallback(() => {
@@ -390,8 +419,7 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
-        onPointerLeave={handlePointerCancel}
-        onLostPointerCapture={handlePointerCancel}
+        onLostPointerCapture={handleLostPointerCapture}
         onDragStart={(e) => e.preventDefault()}
         style={{
           touchAction: 'none',
