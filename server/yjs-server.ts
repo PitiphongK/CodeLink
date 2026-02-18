@@ -54,8 +54,13 @@ const messageListener = (conn: WebSocket, doc: WSSharedDoc, message: Uint8Array)
     
     switch (messageType) {
       case messageSync: {
-        encoding.writeVarUint(encoding.createEncoder(), messageSync)
-        syncProtocol.readSyncMessage(decoder, encoding.createEncoder(), doc.doc, conn)
+        const encoder = encoding.createEncoder()
+        encoding.writeVarUint(encoder, messageSync)
+        syncProtocol.readSyncMessage(decoder, encoder, doc.doc, conn)
+        // Only send if there's an actual response (length > 1 means more than just the message type byte)
+        if (encoding.length(encoder) > 1) {
+          send(conn, encoder)
+        }
         break
       }
       case messageAwareness: {
