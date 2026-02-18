@@ -5,7 +5,7 @@
 import { useCallback } from 'react'
 import { addToast } from '@heroui/toast'
 
-import { languageExtensions, type Languages } from '@/app/interfaces/languages'
+import { Languages, languageExtensions} from '@/app/interfaces/languages'
 
 interface UseFileOperationsOptions {
   /** Reference to the Monaco editor instance */
@@ -14,6 +14,8 @@ interface UseFileOperationsOptions {
   language: Languages
   /** Room ID for file naming */
   roomId: string
+  /** Optional callback to update language when importing a file */
+  onLanguageChange?: (language: Languages) => void
 }
 
 interface UseFileOperationsReturn {
@@ -32,7 +34,24 @@ export function useFileOperations({
   editorRef,
   language,
   roomId,
+  onLanguageChange,
 }: UseFileOperationsOptions): UseFileOperationsReturn {
+  const getLanguageFromFilename = (filename?: string | null): Languages | null => {
+    if (!filename) return null
+    const ext = filename.split('.').pop()?.toLowerCase()
+    if (!ext) return null
+
+    switch (ext) {
+      case 'js':
+        return Languages.JAVASCRIPT
+      case 'ts':
+        return Languages.TYPESCRIPT
+      case 'py':
+        return Languages.PYTHON
+      default:
+        return null
+    }
+  }
   // Export editor content to file
   const handleExport = useCallback(() => {
     if (!editorRef.current) return
@@ -55,6 +74,10 @@ export function useFileOperations({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0]
       if (file && editorRef.current) {
+        const detected = getLanguageFromFilename(file.name)
+        if (detected && detected !== language) {
+          onLanguageChange?.(detected)
+        }
         const reader = new FileReader()
         reader.onload = (e) => {
           const content = e.target?.result as string
@@ -63,7 +86,7 @@ export function useFileOperations({
         reader.readAsText(file)
       }
     },
-    [editorRef]
+    [editorRef, language, onLanguageChange]
   )
 
   // Import content from GitHub
@@ -86,6 +109,11 @@ export function useFileOperations({
         if (data.type === 'file' && editorRef.current) {
           editorRef.current.setValue(data.content)
 
+          const detected = getLanguageFromFilename(data.filename || filePath)
+          if (detected && detected !== language) {
+            onLanguageChange?.(detected)
+          }
+
           addToast({
             title: 'Import successful',
             description: `Imported ${data.filename} from GitHub`,
@@ -107,7 +135,7 @@ export function useFileOperations({
         throw error
       }
     },
-    [editorRef]
+    [editorRef, language, onLanguageChange]
   )
 
   return {

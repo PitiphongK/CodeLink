@@ -9,12 +9,15 @@ import {
 } from '@heroui/react'
 
 import { Languages, languageOptions } from '@/app/interfaces/languages'
+import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 interface LanguageSelectorProps {
   /** Currently selected language */
   language: Languages
   /** Callback when language changes */
   onLanguageChange: (language: Languages) => void
+  /** Whether the selector is disabled */
+  disabled?: boolean
   /** Additional class names */
   className?: string
 }
@@ -25,15 +28,22 @@ interface LanguageSelectorProps {
 export default function LanguageSelector({
   language,
   onLanguageChange,
+  disabled = false,
   className = '',
 }: LanguageSelectorProps) {
   return (
-    <div className={`absolute bottom-4 right-4 z-10 ${className}`}>
-      <Dropdown>
+    <div
+      className={`absolute bottom-4 right-4 z-10 ${className} ${disabled ? 'opacity-60 pointer-events-none' : ''
+        }`}
+      aria-disabled={disabled}
+    >
+      <Dropdown placement="bottom-end" className='rounded-xl border-1 border-neutral-700'>
         <DropdownTrigger>
           <Button
             className="capitalize bg-surface-secondary hover:bg-surface-elevated text-text-primary"
             variant="bordered"
+            isDisabled={disabled}
+            startContent={getLanguageIcon(language)}
           >
             {language}
           </Button>
@@ -51,7 +61,9 @@ export default function LanguageSelector({
           }}
         >
           {(option) => (
-            <DropdownItem key={option.value}>{option.label}</DropdownItem>
+            <DropdownItem key={option.value} startContent={getLanguageIcon(option.value)}>
+              {option.label}
+            </DropdownItem>
           )}
         </DropdownMenu>
       </Dropdown>

@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 
 import {
   Button,
+  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -20,12 +21,13 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
+  Tooltip,
 } from '@heroui/react'
-import { MoreVertical } from 'lucide-react'
+import { Check, Copy, Crown, Info, MoreVertical } from 'lucide-react'
 
 import type { AwarenessState } from '@/app/interfaces/awareness'
 
-type Role = 'driver' | 'navigator' | 'none'
+type Role = 'driver' | 'navigator'
 
 type Props = {
   isOpen: boolean
@@ -55,6 +57,7 @@ export default function RolesModal({
     id: number
     name: string
   } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const confirmTransfer = () => {
     if (!pendingOwner || !canTransfer || !onTransferOwner) return
@@ -63,28 +66,46 @@ export default function RolesModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" backdrop="blur">
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalContent>
         {() => (
           <>
             <ModalHeader className="flex flex-col gap-1 text-lg font-semibold">
               Manage access
-              <span className="text-xs font-normal text-default-500">
-                Assign driver / navigator roles and ownership
+              <span className="text-sm font-normal text-default-500">
+                Control permissions and roles for current members.
               </span>
             </ModalHeader>
             <ModalBody className="gap-4">
-              {!isOwner && (
-                <div className="text-xs text-warning-500">
-                  Only the owner can change roles or ownership.
-                </div>
-              )}
 
-              <Table removeWrapper aria-label="Manage roles">
+              <Table
+                isHeaderSticky
+                removeWrapper
+                aria-label="Manage roles"
+                selectionMode="none"
+                classNames={{
+                  base: "max-h-[250px] overflow-auto",
+                }}
+              >
                 <TableHeader>
-                  <TableColumn>Name</TableColumn>
-                  <TableColumn>Role</TableColumn>
-                  <TableColumn align="end">Actions</TableColumn>
+                  <TableColumn>NAME</TableColumn>
+                  <TableColumn width={200}>
+                    <div className="flex items-center gap-2">
+                      <span>ROLE</span>
+                      <Tooltip
+                        content={
+                          <div className="text-xs space-y-1">
+                            <div><span className="font-semibold">Driver:</span> Can edit code</div>
+                            <div><span className="font-semibold">Navigator:</span> Cannot edit, follows driver</div>
+                          </div>
+                        }
+                        delay={0}
+                      >
+                        <Info size={16} className="text-default-400 cursor-help" />
+                      </Tooltip>
+                    </div>
+                  </TableColumn>
+                  <TableColumn align="center">ACTIONS</TableColumn>
                 </TableHeader>
                 <TableBody emptyContent="No participants">
                   {users.map(([clientId, state]) => {
@@ -96,7 +117,7 @@ export default function RolesModal({
                     return (
                       <TableRow
                         key={clientId}
-                        className="bg-surface-primary border-b border-border-subtle"
+                        className="bg-surface-primary"
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -108,18 +129,19 @@ export default function RolesModal({
                             />
                             <span className="text-sm font-medium">{name}</span>
                             {isCurrentOwner && (
-                              <span className="text-[11px] rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-blue-200">
+                              <Chip size="sm" variant="flat" color="warning">
                                 Owner
-                              </span>
+                              </Chip>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
                           <Select
-                            className="max-w-[180px]"
+                            className="max-w-45"
                             selectedKeys={new Set([role])}
                             aria-label={`Set role for ${name}`}
                             isDisabled={disableRoleChange}
+                            size="sm"
                             onSelectionChange={(keys) => {
                               const sel = Array.from(keys)[0] as Role
                               onSetRole(clientId, sel)
@@ -127,10 +149,9 @@ export default function RolesModal({
                           >
                             <SelectItem key="driver">Driver</SelectItem>
                             <SelectItem key="navigator">Navigator</SelectItem>
-                            <SelectItem key="none">None</SelectItem>
                           </Select>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-center">
                           <Dropdown placement="bottom-start">
                             <DropdownTrigger>
                               <Button
@@ -153,6 +174,7 @@ export default function RolesModal({
                             >
                               <DropdownItem
                                 key="make-owner"
+                                startContent={<Crown size={16} />}
                                 onPress={() => {
                                   if (!canTransfer || isCurrentOwner) return
                                   const candidate =
@@ -218,17 +240,26 @@ export default function RolesModal({
             <ModalFooter className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {onCopyLink && (
-                  <Button
-                    variant="bordered"
-                    onPress={onCopyLink}
-                    size="sm"
-                    className="bg-surface-secondary text-text-primary"
-                  >
-                    Copy link
-                  </Button>
+                  <Tooltip content={copied ? 'Link copied' : 'Copy room link'}>
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color={copied ? 'success' : 'default'}
+                      startContent={
+                        copied ? <Check size={16} /> : <Copy size={16} />
+                      }
+                      onPress={() => {
+                        onCopyLink()
+                        setCopied(true)
+                        window.setTimeout(() => setCopied(false), 5000)
+                      }}
+                    >
+                      {copied ? 'Link copied!' : 'Copy room link'}
+                    </Button>
+                  </Tooltip>
                 )}
               </div>
-              <Button variant="flat" onPress={onClose} size="sm">
+              <Button variant="light" color="danger" onPress={onClose} size="sm">
                 Close
               </Button>
             </ModalFooter>

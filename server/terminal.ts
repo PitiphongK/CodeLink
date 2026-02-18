@@ -39,7 +39,7 @@ export class TerminalManager {
   private readonly idleKillMs = 30_000
 
   // Kill any run that exceeds this duration.
-  private readonly runTimeoutMs = 10_000
+  private readonly runTimeoutMs = 30_000
 
   // Limit buffered + streamed output to prevent memory abuse.
   private readonly maxTotalOutputChars = 256_000

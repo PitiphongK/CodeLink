@@ -6,6 +6,13 @@ import {
   PanelResizeHandle,
 } from 'react-resizable-panels'
 
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+} from '@heroui/react'
 import { addToast } from '@heroui/toast'
 import Editor from '@monaco-editor/react'
 import { useTheme } from 'next-themes'
@@ -31,7 +38,6 @@ import {
   STORAGE_KEYS,
   YJS_KEYS,
   YJS_WEBSOCKET_URL,
-  getDefaultEditorContent,
 } from '@/app/constants/editor'
 import {
   useFileOperations,
@@ -54,6 +60,12 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
+import { MoreHorizontal, Pen, PenOff, X } from 'lucide-react'
+import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
+
+const LANGUAGE_VALUES = new Set(Object.values(Languages))
+const isValidLanguage = (value: unknown): value is Languages =>
+  LANGUAGE_VALUES.has(value as Languages)
 
 // ============================================================================
 // EditorClient Component
@@ -76,6 +88,14 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const { resolvedTheme } = useTheme()
   const monacoTheme = resolvedTheme === 'dark' ? 'vs-dark' : 'vs'
 
+  const editorTabs = [
+    {
+      id: 'main',
+      title: 'main',
+      isActive: true,
+    },
+  ]
+
   // ============================================================================
   // Refs - Yjs Integration
   // ============================================================================
@@ -95,7 +115,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // ============================================================================
   const [userStates, setUserStates] = useState<AwarenessEntry[]>([])
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT)
+  const languageRef = useRef<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
+  const [followEnabled, setFollowEnabled] = useState(true)
   const [running, setRunning] = useState(false)
   const terminalRef = useRef<SharedTerminalHandle | null>(null)
 
@@ -127,10 +149,22 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // ============================================================================
   // State - Role & Drawing
   // ============================================================================
-  const [myRole, setMyRole] = useState<AwarenessRole>('none')
-  const myRoleRef = useRef<AwarenessRole>('none')
+  const [myRole, setMyRole] = useState<AwarenessRole>('navigator')
+  const myRoleRef = useRef<AwarenessRole>('navigator')
   const [overlayActive, setOverlayActive] = useState(false)
+  const handleToggleOverlay = useCallback(() => {
+    setOverlayActive((prev) => !prev)
+  }, [])
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
+
+  /** Sync language to room map (driver only) */
+  const handleLanguageChange = useCallback((next: Languages) => {
+    if (next === languageRef.current) return
+    if (myRoleRef.current === 'navigator') return
+    languageRef.current = next
+    setLanguage(next)
+    roomMapRef.current?.set(ROOM_MAP_KEYS.LANGUAGE, next)
+  }, [])
 
   // ============================================================================
   // Custom Hooks - Extracted Business Logic
@@ -143,6 +177,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     editorRef,
     language,
     roomId,
+    onLanguageChange: handleLanguageChange,
   })
 
   const {
@@ -155,6 +190,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   } = usePanelLayout({
     panelsMapRef,
     myRole,
+    followEnabled,
   })
 
   const {
@@ -286,12 +322,29 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       setIsOwner(isCurrentUserOwner)
       isOwnerRef.current = isCurrentUserOwner
 
-      // Immediately assign roles after owner is determined
-      // Owner is driver, everyone else is navigator
+      // Assign initial roles if not already set
+      // Owner gets driver, others get navigator - but owner can change later
+      const existingRole = rolesMap.get(currentId.toString())
       const myInitialRole: AwarenessRole = isCurrentUserOwner ? 'driver' : 'navigator'
-      rolesMap.set(currentId.toString(), myInitialRole)
-      setMyRole(myInitialRole)
-      myRoleRef.current = myInitialRole
+      if (existingRole == null) {
+        rolesMap.set(currentId.toString(), myInitialRole)
+        setMyRole(myInitialRole)
+        myRoleRef.current = myInitialRole
+      } else {
+        setMyRole(existingRole)
+        myRoleRef.current = existingRole
+      }
+
+      // Initialize or read shared language
+      const sharedLanguage = roomMap.get(ROOM_MAP_KEYS.LANGUAGE)
+      if (!isValidLanguage(sharedLanguage)) {
+        if (isCurrentUserOwner) {
+          roomMap.set(ROOM_MAP_KEYS.LANGUAGE, languageRef.current)
+        }
+      } else if (sharedLanguage !== languageRef.current) {
+        languageRef.current = sharedLanguage
+        setLanguage(sharedLanguage)
+      }
 
       // Start the local timer with the correct initial role
       if (sessionStartRef.current == null) {
@@ -310,6 +363,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
       setOwnerId(typeof owner === 'number' ? owner : null)
       setIsOwner(owner === currentId)
+
+      const sharedLanguage = roomMap.get(ROOM_MAP_KEYS.LANGUAGE)
+      if (
+        isValidLanguage(sharedLanguage) &&
+        sharedLanguage !== languageRef.current
+      ) {
+        languageRef.current = sharedLanguage
+        setLanguage(sharedLanguage)
+      }
     }
     roomMap.observe(roomObserver)
 
@@ -353,9 +415,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       const fromMap = rolesMap.get(selfId.toString())
       // Only update if we have an explicit role from the map
       // Initial role is set in syncedHandler
-      if (fromMap != null) {
-        setMyRole(fromMap)
+      if (fromMap != null && fromMap !== myRoleRef.current) {
         myRoleRef.current = fromMap
+        setMyRole(fromMap)
       }
     }
     rolesMap.observe(rolesObserver)
@@ -438,6 +500,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     myRoleRef.current = myRole
   }, [myRole])
 
+  /** Keep languageRef in sync for callbacks */
+  useEffect(() => {
+    languageRef.current = language
+  }, [language])
+
   // ============================================================================
   // Callbacks - User Actions
   // ============================================================================
@@ -452,6 +519,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     setAnalyticsOpen(true)
   }, [computeSessionSummaryNow, computeTeamContributionNow, publishMyRoleTotals])
 
+
   // ============================================================================
   // Effects - Role Enforcement & Follow Mode
   // ============================================================================
@@ -463,6 +531,30 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     followTargetClientId: following ? Number(following) : null,
     onTargetGone: () => setFollowing(null),
   })
+
+  const getDriverIdStr = useCallback(() => {
+    const rolesMap = rolesMapRef.current
+    if (!rolesMap) return null
+    const driverEntry = userStates.find(
+      ([cid]) => rolesMap.get(cid.toString()) === 'driver'
+    )
+    return driverEntry ? driverEntry[0].toString() : null
+  }, [userStates])
+
+  const handleToggleFollow = useCallback(() => {
+    const canFollow = myRole === 'navigator'
+    if (!canFollow) return
+
+    const next = !followEnabled
+    setFollowEnabled(next)
+    if (!next) {
+      if (following) setFollowing(null)
+      return
+    }
+
+    const driverIdStr = getDriverIdStr()
+    if (driverIdStr) setFollowing(driverIdStr)
+  }, [myRole, followEnabled, following, getDriverIdStr])
 
   /** Enforce roles: driver can edit, navigator is read-only and auto-follows driver */
   useEffect(() => {
@@ -480,22 +572,17 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const isNavigator = role === 'navigator'
     editor.updateOptions({ readOnly: isNavigator })
 
-    // Find current driver and follow if navigator
-    if (isNavigator) {
-      // Find first driver among known users
-      const states = userStates
-      const driverEntry = states.find(
-        ([cid]) => rolesMap.get(cid.toString()) === 'driver'
-      )
-      if (driverEntry) {
-        const driverIdStr = driverEntry[0].toString()
-        if (following !== driverIdStr) setFollowing(driverIdStr)
-      }
-    } else {
-      // If not navigator and currently following, stop following
-      if (following) setFollowing(null)
+    const canFollow = role === 'navigator'
+
+    // Follow driver only if follow is enabled
+    if (canFollow && followEnabled) {
+      const driverIdStr = getDriverIdStr()
+      if (driverIdStr && following !== driverIdStr) setFollowing(driverIdStr)
+    } else if (following) {
+      // Stop following when disabled or role isn't allowed
+      setFollowing(null)
     }
-  }, [userStates, following])
+  }, [userStates, following, followEnabled, getDriverIdStr])
 
   /**
    * Auto-assign roles: owner is driver, everyone else is navigator.
@@ -532,7 +619,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       rolesMap.set(prevOwner.toString(), 'navigator')
     }
 
-    rolesMap.set(currentOwner.toString(), 'driver')
+    // Don't force owner to be driver - let them choose their own role
+    // (only assign driver role to new users without one)
 
     // Assign navigator role to any new users who don't have a role yet
     for (const cid of presentIds) {
@@ -636,11 +724,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     const model = editor.getModel()
     if (model) {
       new MonacoBinding(ytext, model, new Set([editor]), provider.awareness)
-    }
-
-    // Set initial value if the document is empty
-    if (ytext.length === 0) {
-      ytext.insert(0, getDefaultEditorContent(roomId))
     }
   }
 
@@ -805,6 +888,63 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
   }, [handleExport, handleFileImport])
 
+  const renderEditorTabBar = () => (
+    <div className="flex items-center gap-2 h-10 min-h-10 bg-surface-primary">
+      <div className="flex flex-1 items-center gap-2 overflow-hidden">
+        {editorTabs.map((tab) => (
+          <Button
+            key={tab.id}
+            variant="flat"
+            size="sm"
+            className={`h-10 px-3 rounded-none transition-colors ${tab.isActive
+                ? 'bg-surface-secondary text-text-primary'
+                : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
+              }`}
+            aria-current={tab.isActive ? 'page' : undefined}
+            aria-label={`${tab.title} tab`}
+          >
+            <div className="flex items-center gap-3 h-full">
+              {getLanguageIcon(language)}
+              <span className="text-sm tracking-wide">{tab.title}</span>
+              {tab.isActive && (
+                <span className="text-default-500">
+                  <X size={12} />
+                </span>
+              )}
+            </div>
+          </Button>
+        ))}
+      </div>
+      <Dropdown>
+        <DropdownTrigger>
+          <Button
+            isIconOnly
+            variant="flat"
+            size="sm"
+            className="mx-1 rounded-2xl border border-transparent bg-transparent text-text-secondary transition-colors hover:bg-surface-elevated"
+            aria-label="Drawing overlay options"
+          >
+            <MoreHorizontal size={16} />
+          </Button>
+        </DropdownTrigger>
+        <DropdownMenu aria-label="Drawing overlay options" selectionMode="none">
+          <DropdownItem
+            key="toggle-overlay"
+            onPress={handleToggleOverlay}
+            startContent={overlayActive ? <Pen size={16} /> : <PenOff size={16} />}
+            endContent={
+              <span className="text-xs uppercase text-default-500">
+                {overlayActive ? 'On' : 'Off'}
+              </span>
+            }
+          >
+            Drawing overlay
+          </DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
+    </div>
+  )
+
   // ============================================================================
   // Render
   // ============================================================================
@@ -832,7 +972,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         isOwner={isOwner}
         userStates={userStates}
         getRole={(clientId) =>
-          rolesMapRef.current?.get(clientId.toString()) ?? 'none'
+          rolesMapRef.current?.get(clientId.toString()) ?? 'navigator'
         }
         onSetRole={(clientId, role) => {
           if (!isOwner) return
@@ -897,65 +1037,113 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           window.location.href = '/'
         }}
         isOwner={isOwner}
-        drawingTool={drawingTool}
-        onChangeDrawingTool={setDrawingTool}
-        overlayActive={overlayActive}
-        onToggleOverlay={() => setOverlayActive((s) => !s)}
+        myRole={myRole}
+        followEnabled={followEnabled}
+        onToggleFollow={handleToggleFollow}
       />
       <div className="flex flex-1 overflow-hidden">
-        <PanelGroup
-          ref={hGroupRef}
-          direction="horizontal"
-          onLayout={handleHLayoutChange}
-        >
-          <Panel collapsible={true} collapsedSize={0} minSize={10}>
-            <PanelGroup
-              ref={vGroupRef}
-              direction="vertical"
-              onLayout={handleVLayoutChange}
-            >
-              <Panel>
-                <div className="flex-1 relative h-full">
-                  <Editor
-                    height="100%"
-                    language={language}
-                    theme={monacoTheme}
-                    options={MONACO_EDITOR_OPTIONS}
-                    onMount={handleMount}
-                  />
-                  <EditorOverlayDrawing
-                    ydoc={ydocRef.current}
-                    active={overlayActive}
-                    tool={drawingTool}
-                  />
-                  <LanguageSelector
-                    language={language}
-                    onLanguageChange={setLanguage}
-                  />
-                </div>
-              </Panel>
-              <PanelResizeHandle
-                disabled={myRole === 'navigator'}
-                className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
-              />
-              <Panel
-                collapsible={true}
-                collapsedSize={0}
-                minSize={10}
-                className="bg-surface-primary flex flex-col"
+        {/* Desktop: horizontal layout (editor/terminal | drawing) */}
+        <div className="hidden md:flex flex-1">
+          <PanelGroup
+            ref={hGroupRef}
+            direction="horizontal"
+            onLayout={handleHLayoutChange}
+          >
+            <Panel collapsible={true} collapsedSize={0} minSize={10}>
+              <PanelGroup
+                ref={vGroupRef}
+                direction="vertical"
+                onLayout={handleVLayoutChange}
               >
-                <TerminalPanel ref={terminalRef} roomId={roomId} />
-              </Panel>
-            </PanelGroup>
-          </Panel>
-          <PanelResizeHandle
-            disabled={myRole === 'navigator'}
-            className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
-          />
-          <Panel collapsible={true} collapsedSize={0} minSize={10}>
-            <DrawingBoard ydoc={ydocRef.current} tool={drawingTool} />
-          </Panel>
-        </PanelGroup>
+                <Panel>
+                  <div className="flex flex-col h-full">
+                    {renderEditorTabBar()}
+                    <div className="flex-1 relative">
+                      <Editor
+                        height="100%"
+                        language={language}
+                        theme={monacoTheme}
+                        options={MONACO_EDITOR_OPTIONS}
+                        onMount={handleMount}
+                      />
+                      <EditorOverlayDrawing
+                        ydoc={ydocRef.current}
+                        active={overlayActive}
+                        tool={drawingTool}
+                        onToolChange={setDrawingTool}
+                      />
+                      <LanguageSelector
+                        language={language}
+                        onLanguageChange={handleLanguageChange}
+                        disabled={myRole === 'navigator'}
+                      />
+                    </div>
+                  </div>
+                </Panel>
+                <PanelResizeHandle
+                  disabled={myRole === 'navigator'}
+                  className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+                />
+                <Panel
+                  collapsible={true}
+                  collapsedSize={0}
+                  minSize={10}
+                  className="bg-surface-primary flex flex-col"
+                >
+                  <TerminalPanel ref={terminalRef} roomId={roomId} />
+                </Panel>
+              </PanelGroup>
+            </Panel>
+            <PanelResizeHandle
+              disabled={myRole === 'navigator'}
+              className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+            />
+            <Panel collapsible={true} collapsedSize={0} minSize={10}>
+              <DrawingBoard
+                ydoc={ydocRef.current}
+                tool={drawingTool}
+                onToolChange={setDrawingTool}
+              />
+            </Panel>
+          </PanelGroup>
+        </div>
+
+        {/* Mobile: vertical layout (editor, terminal, drawing stacked) */}
+        <div className="flex flex-col flex-1 md:hidden overflow-auto">
+          <div className="flex flex-col h-full overflow-hidden">
+            {renderEditorTabBar()}
+            <div className="flex-1 relative">
+              <Editor
+                height="100%"
+                language={language}
+                theme={monacoTheme}
+                options={MONACO_EDITOR_OPTIONS}
+                onMount={handleMount}
+              />
+              <EditorOverlayDrawing
+                ydoc={ydocRef.current}
+                active={overlayActive}
+                tool={drawingTool}
+                onToolChange={setDrawingTool}
+              />
+              <LanguageSelector
+                language={language}
+                onLanguageChange={handleLanguageChange}
+                disabled={myRole === 'navigator'}
+              />
+            </div>
+          </div>
+          <div className="h-48 bg-surface-primary border-t border-border-strong">
+            <TerminalPanel ref={terminalRef} roomId={roomId} />
+          </div>
+          <div className="h-64 border-t border-border-strong">
+            <DrawingBoard
+              ydoc={ydocRef.current}
+              tool={drawingTool}
+              onToolChange={setDrawingTool}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

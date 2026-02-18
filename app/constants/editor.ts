@@ -7,7 +7,8 @@
 // ============================================================================
 
 /** Yjs WebSocket server URL */
-export const YJS_WEBSOCKET_URL = 'wss://demos.yjs.dev/ws'
+export const YJS_WEBSOCKET_URL = 
+  process.env.NEXT_PUBLIC_YJS_WEBSOCKET_URL || 'wss://pairdev-yjs.onrender.com'
 
 // ============================================================================
 // Storage Keys
@@ -62,6 +63,7 @@ export const YJS_KEYS = {
 /** Keys within the room map */
 export const ROOM_MAP_KEYS = {
   OWNER: 'owner',
+  LANGUAGE: 'language',
   DESTROYED: 'destroyed',
   DESTROYED_AT: 'destroyedAt',
 } as const

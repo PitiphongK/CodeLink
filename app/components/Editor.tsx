@@ -33,6 +33,14 @@ export default function EditorComponent({
   language,
   setLanguage,
 }: Props) {
+  const tabs = [
+    {
+      id: 'main',
+      title: 'main',
+      isActive: true,
+    },
+  ]
+
   const handleMount = (
     editor: import('monaco-editor').editor.IStandaloneCodeEditor
   ) => {
@@ -55,57 +63,66 @@ export default function EditorComponent({
           )
         }
       })
-
-      // Set initial value if the document is empty
-      if (ytext.length === 0) {
-        ytext.insert(
-          0,
-          `// Room: ${roomId}\nfunction add(a, b) { return a + b }\n`
-        )
-      }
     }
   }, [editorRef, ydoc, provider, roomId])
 
   return (
-    <div className="flex-1 relative h-full">
-      <Editor
-        height="100%"
-        language={language}
-        theme="vs-dark"
-        options={{
-          automaticLayout: true,
-          minimap: { enabled: false },
-          wordWrap: 'on',
-          scrollBeyondLastLine: false,
-          fontSize: 14,
-        }}
-        onMount={handleMount}
-      />
-      {/* overlay drawing component sits on top of the editor area */}
-      {/* <EditorOverlayDrawing ydoc={ydoc} /> */}
-      <div className="absolute bottom-4 right-4 z-10">
-        <Dropdown>
-          <DropdownTrigger>
-            <Button className="capitalize" variant="bordered">
-              {language}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            disallowEmptySelection
-            aria-label="Language selection"
-            selectedKeys={[language]}
-            selectionMode="single"
-            variant="flat"
-            onSelectionChange={(key) => {
-              const selected = key.currentKey?.toString() as Languages
-              setLanguage(selected)
-            }}
+    <div className="flex-1 relative h-full flex flex-col">
+      <div className="flex items-center gap-2 h-10 px-3 border-b bg-surface-primary">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`px-3 py-1 text-sm rounded-md border transition-colors ${tab.isActive
+                ? 'bg-surface-secondary border-border-strong text-text-primary'
+                : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
+              }`}
+            aria-current={tab.isActive ? 'page' : undefined}
           >
-            {languageOptions.map((option) => (
-              <DropdownItem key={option.value}>{option.label}</DropdownItem>
-            ))}
-          </DropdownMenu>
-        </Dropdown>
+            {tab.title}
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 relative">
+        <Editor
+          height="100%"
+          language={language}
+          theme="vs-dark"
+          options={{
+            automaticLayout: true,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+            scrollBeyondLastLine: false,
+            fontSize: 14,
+          }}
+          onMount={handleMount}
+        />
+        {/* overlay drawing component sits on top of the editor area */}
+        {/* <EditorOverlayDrawing ydoc={ydoc} /> */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <Dropdown>
+            <DropdownTrigger>
+              <Button className="capitalize" variant="bordered">
+                {language}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              disallowEmptySelection
+              aria-label="Language selection"
+              selectedKeys={[language]}
+              selectionMode="single"
+              variant="flat"
+              onSelectionChange={(key) => {
+                const selected = key.currentKey?.toString() as Languages
+                setLanguage(selected)
+              }}
+            >
+              {languageOptions.map((option) => (
+                <DropdownItem key={option.value}>{option.label}</DropdownItem>
+              ))}
+            </DropdownMenu>
+          </Dropdown>
+        </div>
       </div>
     </div>
   )

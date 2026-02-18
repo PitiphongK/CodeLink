@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:server": "tsx server/terminal-server.ts",
+    "dev:yjs": "tsx server/yjs-server.ts",
     "build": "next build && tsc --project tsconfig.server.json",
     "build:server": "tsc --project tsconfig.server.json --outDir dist",
     "start": "next start",
     "start:server": "node dist/terminal-server.js",
+    "start:yjs": "node dist/yjs-server.js",
     "lint": "eslint"
   },
   "dependencies": {
@@ -57,12 +59,16 @@
     "@types/node": "^20.19.29",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "15.5.4",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "lib0": "^0.2.117",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "ws": "^8.19.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

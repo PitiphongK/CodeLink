@@ -8,6 +8,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-roboto)', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['var(--font-roboto-mono)', 'monospace'],
+      },
       colors: {
         'surface-primary': 'var(--color-surface-primary)',
         'surface-secondary': 'var(--color-surface-secondary)',
