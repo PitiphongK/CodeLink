@@ -4,6 +4,7 @@ The main shared yjs data structures for the app (the doc, lines, and services).
 import { WebsocketProvider } from 'y-websocket'
 import { Stroke } from './interfaces/drawing'
 import * as Y from 'yjs'
+import { YJS_WEBSOCKET_URL } from './constants/editor'
 
 // This collects all existing room
 const yjsInstances = new Map<
@@ -24,7 +25,7 @@ export function setupYjs(roomName: string) {
   if (!instance) {
     const doc = new Y.Doc()
     const provider = new WebsocketProvider(
-      process.env.WEBSOCKET_URL || 'wss://demos.yjs.dev', // TODO: set env
+      process.env.NEXT_PUBLIC_YJS_WEBSOCKET_URL || YJS_WEBSOCKET_URL,
       roomName,
       doc
     )
