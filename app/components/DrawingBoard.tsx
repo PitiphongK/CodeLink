@@ -30,13 +30,15 @@ interface DrawingBoardProps {
   strokesArrayName?: string
 }
 
-type ColorType = '#000000' | '#ef4444' | '#22c55e' | '#3b82f6'
+type ColorType = '#000000' | '#ef4444' | '#22c55e' | '#3b82f6' | '#eab308' | '#a855f7'
 
 const COLORS: { value: ColorType; label: string; tailwind: string }[] = [
   { value: '#000000', label: 'Black', tailwind: 'bg-black' },
   { value: '#ef4444', label: 'Red', tailwind: 'bg-red-500' },
+  { value: '#eab308', label: 'Yellow', tailwind: 'bg-yellow-500' },
   { value: '#22c55e', label: 'Green', tailwind: 'bg-green-500' },
   { value: '#3b82f6', label: 'Blue', tailwind: 'bg-blue-500' },
+  { value: '#a855f7', label: 'Purple', tailwind: 'bg-purple-500' },
 ]
 
 type DrawingToolbarProps = {
@@ -63,7 +65,7 @@ const ToolbarControls = ({
       className="flex flex-col gap-3 p-4"
       onDragStart={(e) => e.preventDefault()}
     >
-      <div className="flex gap-4 justify-center">
+      <div className="flex gap-4 justify-center md:grid md:grid-cols-3 md:gap-3 md:justify-items-center">
         {COLORS.map((color) => (
           <Tooltip key={color.value} content={color.label}>
             <button
