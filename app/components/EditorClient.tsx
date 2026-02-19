@@ -157,6 +157,26 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   }, [])
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
 
+  const getOwnerStorageKey = useCallback(
+    () => `codelink:isOwner:${roomId}`,
+    [roomId]
+  )
+
+  const getOwnerTokenStorageKey = useCallback(
+    () => `codelink:ownerToken:${roomId}`,
+    [roomId]
+  )
+
+  const getOrCreateOwnerToken = useCallback(() => {
+    const key = getOwnerTokenStorageKey()
+    let token = sessionStorage.getItem(key)
+    if (!token) {
+      token = crypto.randomUUID()
+      sessionStorage.setItem(key, token)
+    }
+    return token
+  }, [getOwnerTokenStorageKey])
+
   /** Sync language to room map (driver only) */
   const handleLanguageChange = useCallback((next: Languages) => {
     if (next === languageRef.current) return
@@ -305,15 +325,35 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
       // Determine owner - first client becomes owner if none exists
       let owner = roomMap.get(ROOM_MAP_KEYS.OWNER)
+      const candidates = Array.from(
+        provider.awareness.getStates().keys()
+      ) as number[]
+      const hadOwnerSession =
+        sessionStorage.getItem(getOwnerStorageKey()) === '1'
+      const localOwnerToken = getOrCreateOwnerToken()
+      const storedOwnerToken = roomMap.get(ROOM_MAP_KEYS.OWNER_TOKEN)
+
       if (owner == null) {
-        const candidates = Array.from(
-          provider.awareness.getStates().keys()
-        ) as number[]
         const arbiter =
           candidates.length > 0 ? Math.min(...candidates) : currentId
         if (currentId === arbiter) {
           roomMap.set(ROOM_MAP_KEYS.OWNER, arbiter)
+          roomMap.set(ROOM_MAP_KEYS.OWNER_TOKEN, localOwnerToken)
           owner = arbiter
+        }
+      } else if (owner !== currentId) {
+        // If this client has the owner token, reclaim after refresh.
+        if (storedOwnerToken && storedOwnerToken === localOwnerToken) {
+          roomMap.set(ROOM_MAP_KEYS.OWNER, currentId)
+          owner = currentId
+        } else if (hadOwnerSession && !storedOwnerToken) {
+          const ownerPresent = candidates.includes(owner as number)
+          // Reclaim ownership after refresh when old owner clientId is gone.
+          if (!ownerPresent) {
+            roomMap.set(ROOM_MAP_KEYS.OWNER, currentId)
+            roomMap.set(ROOM_MAP_KEYS.OWNER_TOKEN, localOwnerToken)
+            owner = currentId
+          }
         }
       }
 
@@ -461,7 +501,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       setProviderSynced(false)
       ownerInitRef.current = false
     }
-  }, [roomId])
+  }, [roomId, getOwnerStorageKey, getOrCreateOwnerToken])
 
   // ============================================================================
   // Effects - Room State & Ownership
@@ -494,6 +534,19 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   useEffect(() => {
     isOwnerRef.current = isOwner
   }, [isOwner])
+
+  /** Persist owner status per room across refresh */
+  useEffect(() => {
+    sessionStorage.setItem(getOwnerStorageKey(), isOwner ? '1' : '0')
+  }, [isOwner, getOwnerStorageKey])
+
+  /** Persist owner token in room map so refresh can reclaim ownership */
+  useEffect(() => {
+    if (!isOwner || !providerSynced) return
+    const roomMap = roomMapRef.current
+    if (!roomMap) return
+    roomMap.set(ROOM_MAP_KEYS.OWNER_TOKEN, getOrCreateOwnerToken())
+  }, [isOwner, providerSynced, getOrCreateOwnerToken])
 
   /** Keep myRoleRef in sync for callbacks */
   useEffect(() => {

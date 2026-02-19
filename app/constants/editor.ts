@@ -63,6 +63,7 @@ export const YJS_KEYS = {
 /** Keys within the room map */
 export const ROOM_MAP_KEYS = {
   OWNER: 'owner',
+  OWNER_TOKEN: 'ownerToken',
   LANGUAGE: 'language',
   DESTROYED: 'destroyed',
   DESTROYED_AT: 'destroyedAt',
