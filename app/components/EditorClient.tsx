@@ -635,7 +635,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       // Stop following when disabled or role isn't allowed
       setFollowing(null)
     }
-  }, [userStates, following, followEnabled, getDriverIdStr])
+  }, [myRole, userStates, following, followEnabled, getDriverIdStr])
 
   /**
    * Auto-assign roles: owner is driver, everyone else is navigator.
@@ -778,6 +778,11 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     if (model) {
       new MonacoBinding(ytext, model, new Set([editor]), provider.awareness)
     }
+
+    // Apply read-only immediately based on current role.
+    // The role-enforcement effect runs before editorRef is set (async mount),
+    // so we must enforce it here as well.
+    editor.updateOptions({ readOnly: myRoleRef.current === 'navigator' })
   }
 
   /** Copy room invite link to clipboard */
@@ -950,8 +955,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
             variant="flat"
             size="sm"
             className={`h-10 px-3 rounded-none transition-colors ${tab.isActive
-                ? 'bg-surface-secondary text-text-primary'
-                : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
+              ? 'bg-surface-secondary text-text-primary'
+              : 'bg-transparent border-transparent text-text-secondary hover:bg-surface-elevated'
               }`}
             aria-current={tab.isActive ? 'page' : undefined}
             aria-label={`${tab.title} tab`}
