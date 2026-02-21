@@ -77,8 +77,8 @@ export default function SettingsModal({
                     variant="light"
                     onPress={() => setActiveSection(key)}
                     className={`justify-start gap-2.5 w-full px-3 text-sm ${activeSection === key
-                        ? 'bg-blue-500/10 text-blue-500 font-medium'
-                        : 'text-text-secondary'
+                      ? 'bg-blue-500/10 text-blue-500 font-medium'
+                      : 'text-text-secondary'
                       }`}
                   >
                     <span className={activeSection === key ? 'text-blue-500' : 'text-default-400'}>

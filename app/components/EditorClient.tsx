@@ -1101,9 +1101,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop: expandable icon sidebar */}
         <div
-          className={`hidden md:flex flex-col shrink-0 bg-surface-primary border-r border-border-strong transition-all duration-200 ${
-            sidebarExpanded ? 'w-52' : 'w-12'
-          }`}
+          className={`hidden md:flex flex-col shrink-0 bg-surface-primary border-r border-border-strong transition-all duration-200 ${sidebarExpanded ? 'w-52' : 'w-12'
+            }`}
         >
           {/* Top: Users toggle button */}
           <div className="flex flex-col flex-1 overflow-hidden">
@@ -1113,9 +1112,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 <Button
                   isIconOnly={!sidebarExpanded}
                   size="sm"
-                  className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${
-                    sidebarExpanded ? 'justify-start gap-2 px-2' : ''
-                  }`}
+                  className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                    }`}
                   onPress={() => setSidebarExpanded((v) => !v)}
                   aria-label="Toggle people panel"
                 >
@@ -1175,11 +1173,10 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                           <Button
                             size="sm"
                             variant="flat"
-                            className={`h-auto min-w-0 px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0 ${
-                              isFollowing
+                            className={`h-auto min-w-0 px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0 ${isFollowing
                                 ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
                                 : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
-                            }`}
+                              }`}
                             onPress={() => {
                               if (isFollowing) {
                                 setFollowing(null)
@@ -1206,9 +1203,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               <Button
                 isIconOnly={!sidebarExpanded}
                 size="sm"
-                className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${
-                  sidebarExpanded ? 'justify-start gap-2 px-2' : ''
-                }`}
+                className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                  }`}
                 onPress={() => setSettingsOpen(true)}
                 aria-label="Settings"
               >
@@ -1220,9 +1216,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               <Button
                 isIconOnly={!sidebarExpanded}
                 size="sm"
-                className={`bg-transparent w-full text-text-primary ${
-                  sidebarExpanded ? 'justify-start gap-2 px-2 hover:bg-red-500/10 hover:text-red-400' : 'hover:bg-red-500'
-                }`}
+                className={`bg-transparent w-full text-text-primary ${sidebarExpanded ? 'justify-start gap-2 px-2 hover:bg-red-500/10 hover:text-red-400' : 'hover:bg-red-500'
+                  }`}
                 onPress={() => isOwner ? setEndConfirmOpen(true) : (window.location.href = '/')}
                 aria-label={isOwner ? 'End Session' : 'Leave Session'}
               >
