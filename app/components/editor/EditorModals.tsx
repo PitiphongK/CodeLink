@@ -46,6 +46,7 @@ interface EditorModalsProps {
   // Settings modal
   settingsOpen: boolean
   onSettingsClose: () => void
+  settingsInitialSection?: 'general' | 'roles'
 
   // End session confirm modal
   endConfirmOpen: boolean
@@ -94,6 +95,7 @@ export default function EditorModals({
   // Settings
   settingsOpen,
   onSettingsClose,
+  settingsInitialSection,
   // End confirm
   endConfirmOpen,
   endingSession,
@@ -134,7 +136,16 @@ export default function EditorModals({
         onTransferOwner={onTransferOwner}
         onCopyLink={onCopyLink}
       />
-      <SettingsModal isOpen={settingsOpen} onClose={onSettingsClose} />
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={onSettingsClose}
+        isOwner={isOwner}
+        users={userStates}
+        getRole={getRole}
+        onSetRole={onSetRole}
+        currentOwnerId={currentOwnerId}
+        initialSection={settingsInitialSection}
+      />
       <EndSessionConfirmModal
         isOpen={endConfirmOpen}
         pending={endingSession}

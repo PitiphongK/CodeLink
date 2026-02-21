@@ -12,6 +12,7 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
+  Tooltip,
 } from '@heroui/react'
 import { addToast } from '@heroui/toast'
 import Editor from '@monaco-editor/react'
@@ -60,7 +61,7 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
-import { MoreHorizontal, Pen, PenOff, X } from 'lucide-react'
+import { LogOut, MoreHorizontal, Pen, PenOff, Settings, X } from 'lucide-react'
 import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 const LANGUAGE_VALUES = new Set(Object.values(Languages))
@@ -1100,6 +1101,49 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         onToggleFollow={handleToggleFollow}
       />
       <div className="flex flex-1 overflow-hidden">
+        {/* Desktop: permanent icon-only sidebar */}
+        <div className="hidden md:flex flex-col w-12 shrink-0 bg-surface-primary border-r border-border-strong">
+          <div className="flex-1" />
+          <div className="flex flex-col items-center gap-1 p-2 pb-4">
+            <Tooltip content="Settings" placement="right">
+              <Button
+                isIconOnly
+                size="sm"
+                className="bg-transparent hover:bg-surface-elevated text-text-secondary"
+                onPress={() => setSettingsOpen(true)}
+                aria-label="Settings"
+              >
+                <Settings size={16} />
+              </Button>
+            </Tooltip>
+            {isOwner ? (
+              <Tooltip content="End Session" placement="right">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  className="bg-transparent hover:bg-red-500 text-text-secondary hover:text-white"
+                  onPress={() => setEndConfirmOpen(true)}
+                  aria-label="End Session"
+                >
+                  <LogOut size={16} />
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Leave Session" placement="right">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  className="bg-transparent hover:bg-surface-elevated text-text-secondary"
+                  onPress={() => { window.location.href = '/' }}
+                  aria-label="Leave Session"
+                >
+                  <LogOut size={16} />
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+
         {/* Desktop: horizontal layout (editor/terminal | drawing) */}
         <div className="hidden md:flex flex-1">
           <PanelGroup
@@ -1140,7 +1184,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 </Panel>
                 <PanelResizeHandle
                   disabled={myRole === 'navigator'}
-                  className="h-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
+                  className="border-b border-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
                 />
                 <Panel
                   collapsible={true}

@@ -68,7 +68,7 @@ export const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
         <path
           d="M20 10 L60 50 L20 90"
           fill="none"
-          stroke="url(#iconGradient)"
+          stroke="currentColor"
           strokeWidth="12"
           strokeLinecap="round"
           strokeLinejoin="round"

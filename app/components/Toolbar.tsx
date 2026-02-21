@@ -18,6 +18,7 @@ import {
   Play,
   Settings,
   X,
+  FileCode2,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -49,7 +50,6 @@ interface Props {
 export default function Toolbar({
   onRun,
   running,
-  onInvite,
   onImport,
   onExport,
   onManageRoles,
@@ -64,29 +64,28 @@ export default function Toolbar({
   followingName,
   onGitHubImport,
 }: Props) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const canToggleFollow = myRole === 'navigator'
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onImport) {
-      onImport(e)
-    }
+    if (onImport) onImport(e)
   }
 
   return (
     <>
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Mobile Sidebar (hidden on desktop) */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 md:hidden transform transition-transform duration-300 ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
@@ -96,7 +95,7 @@ export default function Toolbar({
               isIconOnly
               size="sm"
               className="bg-transparent hover:bg-surface-elevated"
-              onPress={() => setSidebarOpen(false)}
+              onPress={() => setMobileSidebarOpen(false)}
             >
               <X size={20} />
             </Button>
@@ -105,7 +104,7 @@ export default function Toolbar({
           {/* Sidebar Content */}
           <div className="flex flex-col p-2 gap-1">
             <input
-              id="sidebar-file-importer"
+              id="mobile-file-importer"
               type="file"
               onChange={handleFileSelect}
               style={{ display: 'none' }}
@@ -120,7 +119,7 @@ export default function Toolbar({
                 size="sm"
                 onPress={() => {
                   if (myRole !== 'navigator') {
-                    document.getElementById('sidebar-file-importer')?.click()
+                    document.getElementById('mobile-file-importer')?.click()
                   }
                 }}
                 isDisabled={myRole === 'navigator'}
@@ -133,7 +132,7 @@ export default function Toolbar({
                 onPress={() => {
                   if (myRole !== 'navigator' && onGitHubImport) {
                     onGitHubImport()
-                    setSidebarOpen(false)
+                    setMobileSidebarOpen(false)
                   }
                 }}
                 isDisabled={myRole === 'navigator'}
@@ -147,7 +146,7 @@ export default function Toolbar({
                 onPress={() => {
                   if (onExport) {
                     onExport()
-                    setSidebarOpen(false)
+                    setMobileSidebarOpen(false)
                   }
                 }}
               >
@@ -159,7 +158,7 @@ export default function Toolbar({
             <div className="py-2">
               <p className="text-xs text-gray-500 px-3 mb-2">TOOLS</p>
               <Button
-                className={`w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary md:hidden ${followEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                className={`w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary ${followEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
                 size="sm"
                 onPress={() => {
                   if (canToggleFollow) onToggleFollow?.()
@@ -171,29 +170,23 @@ export default function Toolbar({
                   {followEnabled ? 'Unfollow Driver' : 'Follow Driver'}
                 </span>
               </Button>
-              {/* Invite - Mobile only */}
               <Button
-                className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary md:hidden"
+                className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
                 size="sm"
                 onPress={() => {
-                  if (onManageRoles) {
-                    onManageRoles()
-                    setSidebarOpen(false)
-                  }
+                  onManageRoles?.()
+                  setMobileSidebarOpen(false)
                 }}
               >
                 <Share2 size={16} />
                 <span className="text-sm">Invite</span>
               </Button>
-              {/* Analytics - Mobile only */}
               <Button
-                className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary md:hidden"
+                className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
                 size="sm"
                 onPress={() => {
-                  if (onOpenAnalytics) {
-                    onOpenAnalytics()
-                    setSidebarOpen(false)
-                  }
+                  onOpenAnalytics?.()
+                  setMobileSidebarOpen(false)
                 }}
               >
                 <BarChart2 size={16} />
@@ -203,13 +196,11 @@ export default function Toolbar({
                 className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
                 size="sm"
                 onPress={() => {
-                  if (onOpenSettings) {
-                    onOpenSettings()
-                    setSidebarOpen(false)
-                  }
+                  onOpenSettings?.()
+                  setMobileSidebarOpen(false)
                 }}
               >
-                <Settings size={18} />
+                <Settings size={16} />
                 <span className="text-sm">Settings</span>
               </Button>
             </div>
@@ -226,17 +217,14 @@ export default function Toolbar({
             </div> */}
 
             {/* Session Actions */}
-            <div className="py-2 mt-auto">
-              <p className="text-xs text-gray-500 px-3 mb-2">SESSION</p>
+            <div className="py-2 mt-auto border-t border-border-strong">
               {isOwner ? (
                 <Button
-                  className="w-full justify-start bg-transparent hover:bg-red-20 dark:hover:bg-red-500"
+                  className="w-full justify-start bg-transparent hover:bg-red-500 dark:hover:bg-red-500 text-text-primary"
                   size="sm"
                   onPress={() => {
-                    if (onEndSession) {
-                      onEndSession()
-                      setSidebarOpen(false)
-                    }
+                    onEndSession?.()
+                    setMobileSidebarOpen(false)
                   }}
                 >
                   <span className="text-sm">End Session</span>
@@ -246,10 +234,8 @@ export default function Toolbar({
                   className="w-full justify-start bg-transparent hover:bg-surface-elevated text-text-primary"
                   size="sm"
                   onPress={() => {
-                    if (onLeaveSession) {
-                      onLeaveSession()
-                      setSidebarOpen(false)
-                    }
+                    onLeaveSession?.()
+                    setMobileSidebarOpen(false)
                   }}
                 >
                   <span className="text-sm">Leave</span>
@@ -260,27 +246,29 @@ export default function Toolbar({
         </div>
       </div>
 
-      <div className="bg-surface-primary">
-        {/* Top row: hamburger menu, desktop menus, run button centered, desktop right items */}
-        <div className="flex items-center justify-between px-4 py-2 h-12">
-          {/* Left: Hamburger Menu + Desktop File/Help */}
-          <div className="flex items-center gap-2">
+      {/* ── Top Bar ────────────────────────────────────────────── */}
+      <div className="bg-surface-primary border-b border-border-strong shrink-0">
+        <div className="relative flex items-center h-12 px-3 gap-2">
+
+          {/* Left: mobile hamburger | desktop logo + file */}
+          <div className="flex items-center gap-1">
+            {/* Mobile hamburger */}
             <Button
               isIconOnly
-              className="bg-transparent hover:bg-surface-elevated text-text-primary"
+              className="md:hidden bg-transparent hover:bg-surface-elevated text-text-primary"
               size="sm"
-              onPress={() => setSidebarOpen(true)}
+              onPress={() => setMobileSidebarOpen(true)}
             >
               <Menu size={20} />
             </Button>
 
-            {/* Logo */}
-            {/* <Link href="/" className="hidden md:block">
-              <LogoIcon className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity" />
-            </Link> */}
+            {/* Desktop: Logo */}
+            <Link href="/" className="hidden md:flex items-center mr-1">
+              <LogoIcon className="w-8 h-8 text-white" />
+            </Link>
 
-            {/* Desktop only: File dropdown */}
-            {/* <div className="hidden md:flex items-center gap-2">
+            {/* Desktop: File dropdown */}
+            <div className="hidden md:block">
               <input
                 id="toolbar-file-importer"
                 type="file"
@@ -288,26 +276,27 @@ export default function Toolbar({
                 style={{ display: 'none' }}
                 accept=".js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.py"
               />
-              <Dropdown>
+              <Dropdown placement="bottom-start">
                 <DropdownTrigger>
                   <Button
-                    className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
+                    className="bg-transparent hover:bg-surface-elevated text-text-primary text-sm"
                     size="sm"
+                    variant="flat"
                   >
-                    <span className="text-sm">File</span>
+                    File
                   </Button>
                 </DropdownTrigger>
                 <DropdownMenu
-                  aria-label="Import or Export"
-                  selectionMode="single"
-                  onSelectionChange={(key) => {
-                    const k = key.currentKey?.toString()
+                  aria-label="File options"
+                  selectionMode="none"
+                  onAction={(key) => {
+                    const k = key.toString()
                     if (k === 'import') {
                       document.getElementById('toolbar-file-importer')?.click()
-                    } else if (k === 'export' && onExport) {
-                      onExport()
-                    } else if (k === 'github-import' && onGitHubImport) {
-                      onGitHubImport()
+                    } else if (k === 'github-import') {
+                      onGitHubImport?.()
+                    } else if (k === 'export') {
+                      onExport?.()
                     }
                   }}
                 >
@@ -316,7 +305,7 @@ export default function Toolbar({
                   </DropdownItem>
                   <DropdownItem
                     key="github-import"
-                    endContent={<Github size={16} />}
+                    endContent={<Github size={14} />}
                     isDisabled={myRole === 'navigator'}
                   >
                     Import from GitHub
@@ -324,11 +313,11 @@ export default function Toolbar({
                   <DropdownItem key="export">Export</DropdownItem>
                 </DropdownMenu>
               </Dropdown>
-            </div> */}
+            </div>
           </div>
 
-          {/* Center: Run Button */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
+          {/* Center: Run button */}
+          <div className="absolute left-1/2 -translate-x-1/2">
             <Button
               className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300 border border-btn-border"
               size="sm"
@@ -340,22 +329,17 @@ export default function Toolbar({
             </Button>
           </div>
 
-          {/* Right: Desktop Invite, Analytics */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Right: Follow, Invite, Analytics (desktop only) */}
+          <div className="ml-auto hidden md:flex items-center gap-2">
             {canToggleFollow && followEnabled ? (
-              <Chip
-                size="sm"
-                variant="flat"
-                color="primary"
-                className="hidden lg:inline-flex"
-              >
+              <Chip size="sm" variant="flat" color="primary" className="hidden lg:inline-flex">
                 Following {followingName ?? 'driver'}
               </Chip>
             ) : null}
             <Tooltip content={followEnabled ? `Unfollow ${followingName ?? 'driver'}` : `Follow ${followingName ?? 'driver'}`}>
               <Button
                 isIconOnly
-                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled ? 'bg-blue-accent text-white' : ''}`}
+                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled && canToggleFollow ? 'bg-blue-accent text-white' : ''}`}
                 size="sm"
                 onPress={onToggleFollow}
                 aria-label={followEnabled ? 'Unfollow driver' : 'Follow driver'}
@@ -364,13 +348,13 @@ export default function Toolbar({
                 <Navigation size={16} />
               </Button>
             </Tooltip>
-            <Tooltip content="Invite & Share">
+            <Tooltip content="Invite & Roles">
               <Button
                 isIconOnly
                 className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
                 size="sm"
                 onPress={onManageRoles}
-                aria-label="Invite & Share"
+                aria-label="Invite & Roles"
               >
                 <Share2 size={16} />
               </Button>
@@ -387,6 +371,7 @@ export default function Toolbar({
               </Button>
             </Tooltip>
           </div>
+
         </div>
       </div>
     </>

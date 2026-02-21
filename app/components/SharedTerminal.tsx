@@ -35,7 +35,7 @@ function getSocketUrl() {
 function getTerminalTheme(resolvedTheme: string | undefined) {
   if (resolvedTheme === 'dark') {
     return {
-      background: '#1b1b1b',
+      background: '#1e1e1e',
       foreground: '#ededed',
       cursor: '#ededed',
       selectionBackground: 'rgba(255, 255, 255, 0.15)',
