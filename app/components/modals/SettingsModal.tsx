@@ -3,10 +3,12 @@
 import React, { useState } from 'react'
 
 import {
+  Button,
   Modal,
   ModalContent,
   Select,
   SelectItem,
+  Tooltip,
 } from '@heroui/react'
 import { Crown, Settings, Users, X } from 'lucide-react'
 
@@ -23,6 +25,7 @@ type Props = {
   getRole?: (clientId: number) => Role
   onSetRole?: (clientId: number, role: Role) => void
   currentOwnerId?: number | null
+  currentUserId?: number
   initialSection?: 'general' | 'roles'
 }
 
@@ -41,6 +44,7 @@ export default function SettingsModal({
   getRole,
   onSetRole,
   currentOwnerId,
+  currentUserId,
   initialSection = 'general',
 }: Props) {
   const [activeSection, setActiveSection] = useState<NavKey>(initialSection)
@@ -59,7 +63,7 @@ export default function SettingsModal({
     >
       <ModalContent className="p-0">
         {() => (
-          <div className="flex h-[540px] overflow-hidden rounded-2xl">
+          <div className="flex h-135 overflow-hidden rounded-2xl">
 
             {/* ── Left sidebar ─────────────────────────────────── */}
             <div className="w-56 shrink-0 bg-surface-secondary border-r border-border-strong flex flex-col overflow-y-auto">
@@ -68,20 +72,20 @@ export default function SettingsModal({
               </div>
               <nav className="flex flex-col gap-0.5 px-2 pb-4">
                 {NAV_ITEMS.map(({ key, label, icon }) => (
-                  <button
+                  <Button
                     key={key}
-                    onClick={() => setActiveSection(key)}
-                    className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${
-                      activeSection === key
+                    variant="light"
+                    onPress={() => setActiveSection(key)}
+                    className={`justify-start gap-2.5 w-full px-3 text-sm ${activeSection === key
                         ? 'bg-blue-500/10 text-blue-500 font-medium'
-                        : 'text-text-secondary hover:bg-surface-elevated'
-                    }`}
+                        : 'text-text-secondary'
+                      }`}
                   >
                     <span className={activeSection === key ? 'text-blue-500' : 'text-default-400'}>
                       {icon}
                     </span>
                     {label}
-                  </button>
+                  </Button>
                 ))}
               </nav>
             </div>
@@ -101,12 +105,16 @@ export default function SettingsModal({
                       : 'Control permissions and roles for current members.'}
                   </p>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-lg text-default-400 hover:text-text-primary hover:bg-surface-elevated transition-colors"
+                <Button
+                  isIconOnly
+                  variant="light"
+                  size="sm"
+                  onPress={onClose}
+                  className="text-default-400 hover:text-text-primary"
+                  aria-label="Close settings"
                 >
                   <X size={16} />
-                </button>
+                </Button>
               </div>
 
               <div className="w-full border-t border-border-strong" />
@@ -145,17 +153,24 @@ export default function SettingsModal({
                             {name.charAt(0).toUpperCase()}
                           </div>
 
-                          {/* Name + crown */}
+                          {/* Name + crown + you */}
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">
                             <span className="text-sm font-medium text-text-primary truncate">
                               {name}
                             </span>
                             {isCurrentOwner && (
-                              <Crown
-                                size={13}
-                                className="text-yellow-400 shrink-0"
-                                fill="currentColor"
-                              />
+                              <Tooltip content="Owner" size="sm" placement="top">
+                                <Crown
+                                  size={13}
+                                  className="text-yellow-400 shrink-0 cursor-default"
+                                  fill="currentColor"
+                                />
+                              </Tooltip>
+                            )}
+                            {clientId === currentUserId && (
+                              <span className="shrink-0 text-[9px] font-semibold px-1 py-0.5 rounded bg-default-200 text-default-500 leading-none">
+                                You
+                              </span>
                             )}
                           </div>
 

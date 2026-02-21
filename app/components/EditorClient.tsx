@@ -61,7 +61,7 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
-import { LogOut, MoreHorizontal, Pen, PenOff, Settings, X } from 'lucide-react'
+import { Crown, LogOut, MoreHorizontal, Pen, PenOff, Settings, Users, X } from 'lucide-react'
 import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 const LANGUAGE_VALUES = new Set(Object.values(Languages))
@@ -118,7 +118,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const [language, setLanguage] = useState<Languages>(Languages.JAVASCRIPT)
   const languageRef = useRef<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
-  const [followEnabled, setFollowEnabled] = useState(true)
+  const [followEnabled, setFollowEnabled] = useState(false)
   const [running, setRunning] = useState(false)
   const terminalRef = useRef<SharedTerminalHandle | null>(null)
 
@@ -157,6 +157,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     setOverlayActive((prev) => !prev)
   }, [])
   const [drawingTool, setDrawingTool] = useState<'pen' | 'eraser'>('pen')
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [editorMounted, setEditorMounted] = useState(false)
 
   const getOwnerStorageKey = useCallback(
     () => `codelink:isOwner:${roomId}`,
@@ -374,6 +376,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       } else {
         setMyRole(existingRole)
         myRoleRef.current = existingRole
+        // Apply readOnly directly in case the editor is already mounted
+        editorRef.current?.updateOptions({ readOnly: existingRole === 'navigator' })
       }
 
       // Initialize or read shared language
@@ -459,6 +463,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       if (fromMap != null && fromMap !== myRoleRef.current) {
         myRoleRef.current = fromMap
         setMyRole(fromMap)
+        // Apply immediately — don't rely on the React render cycle
+        editorRef.current?.updateOptions({ readOnly: fromMap === 'navigator' })
       }
     }
     rolesMap.observe(rolesObserver)
@@ -596,47 +602,35 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   }, [userStates])
 
   const handleToggleFollow = useCallback(() => {
-    const canFollow = myRole === 'navigator'
-    if (!canFollow) return
+    if (!following) return
+    setFollowing(null)
+    setFollowEnabled(false)
+  }, [following])
 
-    const next = !followEnabled
-    setFollowEnabled(next)
-    if (!next) {
-      if (following) setFollowing(null)
-      return
-    }
+  const monacoOptions = {
+    ...MONACO_EDITOR_OPTIONS,
+    readOnly: myRole === 'navigator',
+  }
 
-    const driverIdStr = getDriverIdStr()
-    if (driverIdStr) setFollowing(driverIdStr)
-  }, [myRole, followEnabled, following, getDriverIdStr])
-
-  /** Enforce roles: driver can edit, navigator is read-only and auto-follows driver */
+  /**
+   * Enforce roles: driver can edit, navigator is read-only.
+   * Runs when myRole changes OR when the editor first mounts (editorMounted),
+   * ensuring readOnly is always applied with the correct role regardless of
+   * which happened first.
+   */
   useEffect(() => {
     const editor = editorRef.current
-    const awareness = providerRef.current?.awareness
-    const rolesMap = rolesMapRef.current
-    if (!editor || !awareness || !rolesMap) return
+    if (!editor) return
+    editor.updateOptions({ readOnly: myRole === 'navigator' })
+  }, [myRole, editorMounted])
 
-    const selfId = awareness.clientID
-    const role =
-      rolesMap.get(selfId.toString()) ??
-      (isOwnerRef.current ? 'driver' : 'navigator')
-
-    // Set readOnly for navigators
-    const isNavigator = role === 'navigator'
-    editor.updateOptions({ readOnly: isNavigator })
-
-    const canFollow = role === 'navigator'
-
-    // Follow driver only if follow is enabled
-    if (canFollow && followEnabled) {
-      const driverIdStr = getDriverIdStr()
-      if (driverIdStr && following !== driverIdStr) setFollowing(driverIdStr)
-    } else if (following) {
-      // Stop following when disabled or role isn't allowed
+  /** Stop following when promoted to driver */
+  useEffect(() => {
+    if (myRole !== 'navigator' && following) {
       setFollowing(null)
+      setFollowEnabled(false)
     }
-  }, [myRole, userStates, following, followEnabled, getDriverIdStr])
+  }, [myRole, following])
 
   /**
    * Auto-assign roles: owner is driver, everyone else is navigator.
@@ -784,6 +778,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     // The role-enforcement effect runs before editorRef is set (async mount),
     // so we must enforce it here as well.
     editor.updateOptions({ readOnly: myRoleRef.current === 'navigator' })
+    // Signal that the editor is ready so the readOnly effect re-runs with
+    // the current myRole state (handles cases where the role was set before mount).
+    setEditorMounted(true)
   }
 
   /** Copy room invite link to clipboard */
@@ -1046,6 +1043,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         // Settings
         settingsOpen={settingsOpen}
         onSettingsClose={() => setSettingsOpen(false)}
+        currentUserId={providerRef.current?.awareness.clientID}
         // End confirm
         endConfirmOpen={endConfirmOpen}
         endingSession={endingSession}
@@ -1101,46 +1099,141 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         onToggleFollow={handleToggleFollow}
       />
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop: permanent icon-only sidebar */}
-        <div className="hidden md:flex flex-col w-12 shrink-0 bg-surface-primary border-r border-border-strong">
-          <div className="flex-1" />
-          <div className="flex flex-col items-center gap-1 p-2 pb-4">
-            <Tooltip content="Settings" placement="right">
+        {/* Desktop: expandable icon sidebar */}
+        <div
+          className={`hidden md:flex flex-col shrink-0 bg-surface-primary border-r border-border-strong transition-all duration-200 ${
+            sidebarExpanded ? 'w-52' : 'w-12'
+          }`}
+        >
+          {/* Top: Users toggle button */}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {/* Users button with badge */}
+            <div className="relative px-2 pt-2">
+              <Tooltip content={sidebarExpanded ? undefined : `${userStates.length} participant${userStates.length !== 1 ? 's' : ''}`} placement="right" isDisabled={sidebarExpanded}>
+                <Button
+                  isIconOnly={!sidebarExpanded}
+                  size="sm"
+                  className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${
+                    sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                  }`}
+                  onPress={() => setSidebarExpanded((v) => !v)}
+                  aria-label="Toggle people panel"
+                >
+                  <div className="relative shrink-0">
+                    <Users size={16} />
+                    {!sidebarExpanded && userStates.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-3.5 h-3.5 bg-blue-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                        {userStates.length}
+                      </span>
+                    )}
+                  </div>
+                  {sidebarExpanded && <span className="text-sm font-medium text-text-primary">People</span>}
+                </Button>
+              </Tooltip>
+            </div>
+
+            {/* Expanded: scrollable user list */}
+            {sidebarExpanded && (
+              <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+                {/* Sort: drivers first */}
+                {[...userStates]
+                  .sort(([cidA], [cidB]) => {
+                    const aRole = rolesMapRef.current?.get(cidA.toString()) ?? 'navigator'
+                    const bRole = rolesMapRef.current?.get(cidB.toString()) ?? 'navigator'
+                    if (aRole === bRole) return 0
+                    return aRole === 'driver' ? -1 : 1
+                  })
+                  .map(([clientId, state]) => {
+                    const name = state.user?.name ?? `User ${clientId}`
+                    const isMe = clientId === providerRef.current?.awareness.clientID
+                    const isUserOwner = clientId === ownerId
+                    const role = rolesMapRef.current?.get(clientId.toString()) ?? 'navigator'
+                    const isFollowing = following === clientId.toString()
+                    const canFollow = myRole === 'navigator' && !isMe && role === 'driver'
+
+                    return (
+                      <div
+                        key={clientId}
+                        className="flex items-center gap-2 px-1 py-1.5 rounded-lg hover:bg-surface-elevated group"
+                      >
+                        {/* Color dot + name */}
+                        <div
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: state.user?.color ?? '#888' }}
+                        />
+                        <span className="flex-1 text-xs truncate text-text-primary flex items-center gap-1.5">
+                          <span className="truncate">{name}</span>
+                          {isUserOwner && (
+                            <Tooltip content="Owner" placement="right" size="sm">
+                              <Crown size={10} className="text-yellow-400 shrink-0" fill="currentColor" />
+                            </Tooltip>
+                          )}
+                          {isMe && <span className="shrink-0 text-[9px] font-semibold px-1 py-0.5 rounded bg-default-200 text-default-500 leading-none">You</span>}
+                        </span>
+                        {/* Follow/unfollow button */}
+                        {canFollow && (
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            className={`h-auto min-w-0 px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0 ${
+                              isFollowing
+                                ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
+                                : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
+                            }`}
+                            onPress={() => {
+                              if (isFollowing) {
+                                setFollowing(null)
+                                setFollowEnabled(false)
+                              } else {
+                                setFollowing(clientId.toString())
+                                setFollowEnabled(true)
+                              }
+                            }}
+                          >
+                            {isFollowing ? 'Unfollow' : 'Follow'}
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom: Settings + End/Leave */}
+          <div className="flex flex-col gap-1 p-2 pb-4">
+            <Tooltip content={sidebarExpanded ? undefined : 'Settings'} placement="right" isDisabled={sidebarExpanded}>
               <Button
-                isIconOnly
+                isIconOnly={!sidebarExpanded}
                 size="sm"
-                className="bg-transparent hover:bg-surface-elevated text-text-secondary"
+                className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${
+                  sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                }`}
                 onPress={() => setSettingsOpen(true)}
                 aria-label="Settings"
               >
-                <Settings size={16} />
+                <Settings size={16} className="shrink-0" />
+                {sidebarExpanded && <span className="text-sm font-medium text-text-primary">Settings</span>}
               </Button>
             </Tooltip>
-            {isOwner ? (
-              <Tooltip content="End Session" placement="right">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  className="bg-transparent hover:bg-red-500 text-text-secondary hover:text-white"
-                  onPress={() => setEndConfirmOpen(true)}
-                  aria-label="End Session"
-                >
-                  <LogOut size={16} />
-                </Button>
-              </Tooltip>
-            ) : (
-              <Tooltip content="Leave Session" placement="right">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  className="bg-transparent hover:bg-surface-elevated text-text-secondary"
-                  onPress={() => { window.location.href = '/' }}
-                  aria-label="Leave Session"
-                >
-                  <LogOut size={16} />
-                </Button>
-              </Tooltip>
-            )}
+            <Tooltip content={sidebarExpanded ? undefined : (isOwner ? 'End Session' : 'Leave Session')} placement="right" isDisabled={sidebarExpanded}>
+              <Button
+                isIconOnly={!sidebarExpanded}
+                size="sm"
+                className={`bg-transparent w-full text-text-primary ${
+                  sidebarExpanded ? 'justify-start gap-2 px-2 hover:bg-red-500/10 hover:text-red-400' : 'hover:bg-red-500'
+                }`}
+                onPress={() => isOwner ? setEndConfirmOpen(true) : (window.location.href = '/')}
+                aria-label={isOwner ? 'End Session' : 'Leave Session'}
+              >
+                <LogOut size={16} className="shrink-0 text-text-secondary" />
+                {sidebarExpanded && (
+                  <span className={`text-sm font-medium text-text-primary}`}>
+                    {isOwner ? 'End Session' : 'Leave'}
+                  </span>
+                )}
+              </Button>
+            </Tooltip>
           </div>
         </div>
 
@@ -1165,7 +1258,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                         height="100%"
                         language={language}
                         theme={monacoTheme}
-                        options={MONACO_EDITOR_OPTIONS}
+                        options={monacoOptions}
                         onMount={handleMount}
                       />
                       <EditorOverlayDrawing
@@ -1219,7 +1312,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 height="100%"
                 language={language}
                 theme={monacoTheme}
-                options={MONACO_EDITOR_OPTIONS}
+                options={monacoOptions}
                 onMount={handleMount}
               />
               <EditorOverlayDrawing

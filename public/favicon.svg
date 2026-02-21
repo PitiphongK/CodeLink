@@ -1,17 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="techGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#4F46E5" stop-opacity="1" />
-      <stop offset="100%" stop-color="#06B6D4" stop-opacity="1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Interlocking Brackets Icon -->
+  <!-- Interlocking Brackets Icon - all white -->
   <g transform="translate(5, 5) scale(1)">
     <path
       d="M20 10 L60 50 L20 90"
       fill="none"
-      stroke="url(#techGradient)"
+      stroke="#FFFFFF"
       stroke-width="12"
       stroke-linecap="round"
       stroke-linejoin="round"

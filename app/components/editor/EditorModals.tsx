@@ -47,6 +47,7 @@ interface EditorModalsProps {
   settingsOpen: boolean
   onSettingsClose: () => void
   settingsInitialSection?: 'general' | 'roles'
+  currentUserId?: number
 
   // End session confirm modal
   endConfirmOpen: boolean
@@ -96,6 +97,7 @@ export default function EditorModals({
   settingsOpen,
   onSettingsClose,
   settingsInitialSection,
+  currentUserId,
   // End confirm
   endConfirmOpen,
   endingSession,
@@ -144,6 +146,7 @@ export default function EditorModals({
         getRole={getRole}
         onSetRole={onSetRole}
         currentOwnerId={currentOwnerId}
+        currentUserId={currentUserId}
         initialSection={settingsInitialSection}
       />
       <EndSessionConfirmModal

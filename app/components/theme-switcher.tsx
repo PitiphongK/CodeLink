@@ -24,11 +24,10 @@ function ThemeCard({
       className={`flex flex-col gap-2 w-full text-left focus:outline-none group`}
     >
       <div
-        className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-          isActive
+        className={`relative rounded-xl overflow-hidden border-2 transition-all ${isActive
             ? 'border-blue-500 shadow-md'
             : 'border-border-strong hover:border-default-400'
-        }`}
+          }`}
       >
         {preview}
         {isActive && (
@@ -39,15 +38,13 @@ function ThemeCard({
       </div>
       <div className="flex items-center gap-2">
         <div
-          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-            isActive ? 'border-blue-500' : 'border-default-400 group-hover:border-default-600'
-          }`}
+          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${isActive ? 'border-blue-500' : 'border-default-400 group-hover:border-default-600'
+            }`}
         >
           {isActive && <div className="w-2 h-2 rounded-full bg-blue-500" />}
         </div>
-        <span className={`text-sm ${
-          isActive ? 'text-text-primary font-medium' : 'text-text-secondary'
-        }`}>
+        <span className={`text-sm ${isActive ? 'text-text-primary font-medium' : 'text-text-secondary'
+          }`}>
           {label}
         </span>
       </div>

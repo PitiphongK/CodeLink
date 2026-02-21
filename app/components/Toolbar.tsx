@@ -83,9 +83,8 @@ export default function Toolbar({
 
       {/* Mobile Sidebar (hidden on desktop) */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 md:hidden transform transition-transform duration-300 ${
-          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-full w-64 bg-surface-primary border-r border-border-strong z-50 md:hidden transform transition-transform duration-300 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
