@@ -100,16 +100,40 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // ============================================================================
   // Refs - Yjs Integration
   // ============================================================================
+  /** Points to whichever editor is currently visible (desktop or mobile). */
   const editorRef = useRef<
+    import('monaco-editor').editor.IStandaloneCodeEditor | null
+  >(null)
+  /** Stable ref to the desktop-layout editor instance. */
+  const desktopEditorRef = useRef<
+    import('monaco-editor').editor.IStandaloneCodeEditor | null
+  >(null)
+  /** Stable ref to the mobile-layout editor instance. */
+  const mobileEditorRef = useRef<
     import('monaco-editor').editor.IStandaloneCodeEditor | null
   >(null)
   const ydocRef = useRef<Y.Doc | null>(null)
   const providerRef = useRef<WebsocketProvider | null>(null)
+  const awarenessRef = useRef<import('y-protocols/awareness').Awareness | null>(null)
   const rolesMapRef = useRef<Y.Map<AwarenessRole> | null>(null)
   const roomMapRef = useRef<Y.Map<unknown> | null>(null)
   const panelsMapRef = useRef<Y.Map<unknown> | null>(null)
   const analyticsMapRef = useRef<Y.Map<unknown> | null>(null)
   const updateUsersRef = useRef<(() => void) | undefined>(undefined)
+
+  // Keep editorRef.current pointing to whichever editor layout is visible.
+  // There are two separate <Editor> instances (desktop + mobile) but only one
+  // is actually rendered at a time due to CSS responsive classes.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const sync = () => {
+      editorRef.current = mq.matches
+        ? desktopEditorRef.current
+        : mobileEditorRef.current
+    }
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   // ============================================================================
   // State - User Presence & Editor
@@ -119,6 +143,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   const languageRef = useRef<Languages>(Languages.JAVASCRIPT)
   const [following, setFollowing] = useState<string | null>(null)
   const [followEnabled, setFollowEnabled] = useState(false)
+  const handleTargetGone = useCallback(() => setFollowing(null), [])
   const [running, setRunning] = useState(false)
   const terminalRef = useRef<SharedTerminalHandle | null>(null)
 
@@ -263,12 +288,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     }
     window.addEventListener('mousemove', handleMouseMove)
 
-    const handleEditorScroll = () => {
-      if (editorRef.current) {
-        const scrollTop = editorRef.current.getScrollTop()
-        provider.awareness.setLocalStateField('scroll', { top: scrollTop })
-      }
-    }
     const updateUsers = () => {
       const states = Array.from(
         provider.awareness.getStates().entries()
@@ -300,10 +319,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
     provider.awareness.on('change', updateUsers)
     updateUsers() // Initial update
-
-    if (editorRef.current) {
-      editorRef.current.onDidScrollChange(handleEditorScroll)
-    }
 
     // roles shared map
     const rolesMap = ydoc.getMap<AwarenessRole>(YJS_KEYS.ROLES)
@@ -478,6 +493,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
     ydocRef.current = ydoc
     providerRef.current = provider
+    awarenessRef.current = provider.awareness
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
@@ -497,6 +513,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       ydoc.destroy()
       ydocRef.current = null
       providerRef.current = null
+      awarenessRef.current = null
 
       // Reset local analytics.
       sessionStartRef.current = null
@@ -555,6 +572,29 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     roomMap.set(ROOM_MAP_KEYS.OWNER_TOKEN, getOrCreateOwnerToken())
   }, [isOwner, providerSynced, getOrCreateOwnerToken])
 
+  /** Inject per-user cursor colors into Monaco based on awareness colors */
+  useEffect(() => {
+    const styleId = 'yjs-cursor-colors'
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = styleId
+      document.head.appendChild(styleEl)
+    }
+    const rules = userStates
+      .map(([clientId, state]) => {
+        const color = state.user?.color ?? '#888888'
+        const name = (state.user?.name ?? `User ${clientId}`).replace(/"/g, '\\"')
+        return [
+          `.yRemoteSelection-${clientId} { background-color: ${color}40; }`,
+          `.yRemoteSelectionHead-${clientId} { border-color: ${color}; }`,
+          `.yRemoteSelectionHead-${clientId}::after { background-color: ${color}; content: "${name}"; }`,
+        ].join('\n')
+      })
+      .join('\n')
+    styleEl.textContent = rules
+  }, [userStates])
+
   /** Keep myRoleRef in sync for callbacks */
   useEffect(() => {
     myRoleRef.current = myRole
@@ -586,10 +626,12 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
   /** Robust follow scroll via awareness client IDs */
   useMonacoFollowScroll({
-    editor: editorRef.current,
-    awareness: providerRef.current?.awareness ?? null,
+    editorRef,
+    awarenessRef,
+    ydocRef,
+    editorReady: editorMounted,
     followTargetClientId: following ? Number(following) : null,
-    onTargetGone: () => setFollowing(null),
+    onTargetGone: handleTargetGone,
   })
 
   const getDriverIdStr = useCallback(() => {
@@ -757,11 +799,24 @@ export default function EditorClient({ roomId }: EditorClientProps) {
   // Handlers - Editor & Session Management
   // ============================================================================
 
-  /** Handle Monaco editor mount and Yjs binding setup */
-  const handleMount = async (
-    editor: import('monaco-editor').editor.IStandaloneCodeEditor
+  /** Shared logic for both desktop and mobile editor mounts. */
+  const mountEditor = async (
+    editor: import('monaco-editor').editor.IStandaloneCodeEditor,
+    isMobile: boolean
   ) => {
-    editorRef.current = editor
+    // Store in the per-layout ref so we can always find each instance.
+    if (isMobile) {
+      mobileEditorRef.current = editor
+    } else {
+      desktopEditorRef.current = editor
+    }
+
+    // Only make this editor the "active" one if its layout is currently visible.
+    const isDesktop = window.matchMedia('(min-width: 768px)').matches
+    if ((isDesktop && !isMobile) || (!isDesktop && isMobile)) {
+      editorRef.current = editor
+    }
+
     const ydoc = ydocRef.current!
     const provider = providerRef.current!
     const ytext = ydoc.getText(YJS_KEYS.MONACO_TEXT)
@@ -782,6 +837,16 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     // the current myRole state (handles cases where the role was set before mount).
     setEditorMounted(true)
   }
+
+  /** onMount handler for the desktop-layout editor. */
+  const handleMount = (
+    editor: import('monaco-editor').editor.IStandaloneCodeEditor
+  ) => mountEditor(editor, false)
+
+  /** onMount handler for the mobile-layout editor. */
+  const handleMountMobile = (
+    editor: import('monaco-editor').editor.IStandaloneCodeEditor
+  ) => mountEditor(editor, true)
 
   /** Copy room invite link to clipboard */
   const handleInvite = () => {
@@ -1132,7 +1197,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
 
             {/* Expanded: scrollable user list */}
             {sidebarExpanded && (
-              <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+              <div className="flex-1 px-2 py-1 space-y-0.5 overflow-x-hidden">
                 {/* Sort: drivers first */}
                 {[...userStates]
                   .sort(([cidA], [cidB]) => {
@@ -1246,9 +1311,9 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 onLayout={handleVLayoutChange}
               >
                 <Panel>
-                  <div className="flex flex-col h-full">
+                  <div className="flex flex-col h-full overflow-hidden">
                     {renderEditorTabBar()}
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative overflow-hidden">
                       <Editor
                         height="100%"
                         language={language}
@@ -1271,7 +1336,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                   </div>
                 </Panel>
                 <PanelResizeHandle
-                  disabled={myRole === 'navigator'}
                   className="border-b border-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
                 />
                 <Panel
@@ -1285,7 +1349,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
               </PanelGroup>
             </Panel>
             <PanelResizeHandle
-              disabled={myRole === 'navigator'}
               className="w-0.75 bg-border-strong flex justify-center items-center transition-colors duration-[250ms] ease-linear hover:bg-blue-400 data-resize-handle-active:bg-blue-400"
             />
             <Panel collapsible={true} collapsedSize={0} minSize={10}>
@@ -1308,7 +1371,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                 language={language}
                 theme={monacoTheme}
                 options={monacoOptions}
-                onMount={handleMount}
+                onMount={handleMountMobile}
               />
               <EditorOverlayDrawing
                 ydoc={ydocRef.current}

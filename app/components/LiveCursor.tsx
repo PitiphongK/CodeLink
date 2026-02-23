@@ -16,7 +16,7 @@ type Props = {
  * Cursor can render outside viewport bounds if the user's screen was larger.
  * Use `overflow: visible` on parent to allow out-of-bounds rendering.
  */
-const LiveCursor = ({ x, y, color, name }: Props) => {
+const LiveCursor = ({ x, y, color }: Props) => {
   return (
     <div
       className="pointer-events-none fixed"
@@ -38,12 +38,6 @@ const LiveCursor = ({ x, y, color, name }: Props) => {
       >
         <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
       </svg>
-      <div
-        className="absolute ml-2 px-2 py-1 text-sm text-white rounded"
-        style={{ backgroundColor: color, top: '20px' }}
-      >
-        {name}
-      </div>
     </div>
   )
 }

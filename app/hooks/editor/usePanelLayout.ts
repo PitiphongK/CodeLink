@@ -144,7 +144,7 @@ export function usePanelLayout({
         hGroupRef.current.setLayout(hLayout)
       } catch { }
     }
-  }, [hLayout])
+  }, [hLayout, followEnabled])
 
   useEffect(() => {
     // Only apply layout changes if driver or following is enabled
@@ -154,7 +154,7 @@ export function usePanelLayout({
         vGroupRef.current.setLayout(vLayout)
       } catch { }
     }
-  }, [vLayout])
+  }, [vLayout, followEnabled])
 
   // Clean up debounce on unmount
   useEffect(() => {
