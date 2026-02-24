@@ -149,7 +149,7 @@ export default function Toolbar({
                   }
                 }}
               >
-                <span className="text-sm">Export</span>
+                <span className="text-sm">Export File</span>
               </Button>
             </div>
 
