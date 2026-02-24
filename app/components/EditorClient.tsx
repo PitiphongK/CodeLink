@@ -27,7 +27,7 @@ import {
   LanguageSelector,
   LiveCursors,
   TerminalPanel,
-} from '@/app/components/editor'
+} from '@/app/components/editor/index'
 import { type SharedTerminalHandle } from '@/app/components/SharedTerminal'
 import Toolbar from '@/app/components/Toolbar'
 import {
@@ -1027,15 +1027,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         onRolesClose={() => setRolesOpen(false)}
         isOwner={isOwner}
         userStates={userStates}
-        getRole={(clientId) =>
+        getRole={(clientId: number) =>
           rolesMapRef.current?.get(clientId.toString()) ?? 'navigator'
         }
-        onSetRole={(clientId, role) => {
+        onSetRole={(clientId: number, role: AwarenessRole) => {
           if (!isOwner) return
           rolesMapRef.current?.set(clientId.toString(), role)
         }}
         currentOwnerId={ownerId}
-        onTransferOwner={(targetId) => {
+        onTransferOwner={(targetId: number) => {
           if (!isOwner) return
           roomMapRef.current?.set(ROOM_MAP_KEYS.OWNER, targetId)
         }}
