@@ -61,7 +61,7 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
-import { Crown, LogOut, MoreHorizontal, Pen, PenOff, Settings, Users, X } from 'lucide-react'
+import { BarChart2, Crown, LogOut, MoreHorizontal, Pen, PenOff, Settings, Users, X } from 'lucide-react'
 import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 const LANGUAGE_VALUES = new Set(Object.values(Languages))
@@ -1197,8 +1197,21 @@ export default function EditorClient({ roomId }: EditorClientProps) {
             )}
           </div>
 
-          {/* Bottom: Settings + End/Leave */}
+          {/* Bottom: Analytics + Settings + End/Leave */}
           <div className="flex flex-col gap-1 p-2 pb-4">
+            <Tooltip content={sidebarExpanded ? undefined : 'Analytics'} placement="right" isDisabled={sidebarExpanded}>
+              <Button
+                isIconOnly={!sidebarExpanded}
+                size="sm"
+                className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                  }`}
+                onPress={handleOpenAnalytics}
+                aria-label="Analytics"
+              >
+                <BarChart2 size={16} className="shrink-0" />
+                {sidebarExpanded && <span className="text-sm font-medium text-text-primary">Analytics</span>}
+              </Button>
+            </Tooltip>
             <Tooltip content={sidebarExpanded ? undefined : 'Settings'} placement="right" isDisabled={sidebarExpanded}>
               <Button
                 isIconOnly={!sidebarExpanded}
