@@ -1174,8 +1174,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                             size="sm"
                             variant="flat"
                             className={`h-auto min-w-0 px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0 ${isFollowing
-                                ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
-                                : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
+                              ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
+                              : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
                               }`}
                             onPress={() => {
                               if (isFollowing) {

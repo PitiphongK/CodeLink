@@ -92,24 +92,24 @@ function RolePie({
         />
         {total > 0
           ? segments.map((s) => {
-              const dash = (s.value / total) * c
-              const el = (
-                <circle
-                  key={s.key}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={r}
-                  fill="transparent"
-                  className={s.className}
-                  strokeWidth={stroke}
-                  strokeDasharray={`${dash} ${c}`}
-                  strokeDashoffset={-offset}
-                  strokeLinecap="butt"
-                />
-              )
-              offset += dash
-              return el
-            })
+            const dash = (s.value / total) * c
+            const el = (
+              <circle
+                key={s.key}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="transparent"
+                className={s.className}
+                strokeWidth={stroke}
+                strokeDasharray={`${dash} ${c}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+              />
+            )
+            offset += dash
+            return el
+          })
           : null}
       </g>
     </svg>
