@@ -158,7 +158,9 @@ export default function HomeClient() {
           type="text"
           className="mb-4"
           value={userName}
-          onChange={(e) => setUserName(e.target.value)}
+          maxLength={50}
+          onChange={(e) => setUserName(e.target.value.slice(0, 50))}
+          description={userName.length >= 40 ? `${50 - userName.length} characters remaining` : undefined}
           autoFocus
         />
         <Button

@@ -3,113 +3,179 @@ import { useEffect, useRef } from 'react'
 
 import type * as monaco from 'monaco-editor'
 import type { Awareness } from 'y-protocols/awareness'
+import * as Y from 'yjs'
 
-export type AwarenessUser = { name?: string; color?: string; id?: string }
-export type AwarenessScroll = { top: number; left: number; ts: number }
-export type AwarenessState = { user?: AwarenessUser; scroll?: AwarenessScroll }
+import type {
+  AwarenessEditorCursor,
+  AwarenessScroll,
+  AwarenessState,
+} from '@/app/interfaces/awareness'
+import { YJS_KEYS } from '@/app/constants/editor'
 
-//
-function throttle<T extends (...args: unknown[]) => void>(
-  fn: T,
-  waitMs: number
-): T {
-  let last = 0
-  let timer: ReturnType<typeof setTimeout> | null = null
-
-  return function (this: unknown, ...args: unknown[]) {
-    const now = Date.now()
-    const remaining = waitMs - (now - last)
-
-    if (remaining <= 0) {
-      last = now
-      fn.apply(this, args)
-    } else {
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => {
-        last = Date.now()
-        fn.apply(this, args)
-      }, remaining)
-    }
-  } as T
-}
-
+/**
+ * Hook to publish local editor cursor and snap to a followed user's cursor.
+ *
+ * `editorReady` MUST be a boolean state that flips to true once both the
+ * Monaco editor and the Yjs awareness are available (e.g. `editorMounted`).
+ * Without it the publish effects would run once with null refs and never
+ * re-run because React refs are stable objects.
+ */
 export function useMonacoFollowScroll(params: {
-  editor: monaco.editor.IStandaloneCodeEditor | null
-  awareness: Awareness | null
+  editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>
+  awarenessRef: React.RefObject<Awareness | null>
+  ydocRef: React.RefObject<Y.Doc | null>
+  /** Flip to true once editor + awareness are ready (triggers effect re-run) */
+  editorReady: boolean
   followTargetClientId: number | null
   onTargetGone?: () => void
 }) {
-  const { editor, awareness, followTargetClientId, onTargetGone } = params
+  const {
+    editorRef,
+    awarenessRef,
+    ydocRef,
+    editorReady,
+    followTargetClientId,
+    onTargetGone,
+  } = params
 
-  const isApplyingRemoteRef = useRef(false)
-  const lastAppliedRemoteTsRef = useRef(0)
+  const lastAppliedLineRef = useRef(0)
+  const lastAppliedColumnRef = useRef(0)
 
-  // Publish local scroll (only when NOT following)
+  // Reset applied tracking when follow target changes
   useEffect(() => {
+    lastAppliedLineRef.current = 0
+    lastAppliedColumnRef.current = 0
+  }, [followTargetClientId])
+
+  // ── Publish local scroll position ──────────────────────────────────
+  useEffect(() => {
+    if (!editorReady) return
+    const editor = editorRef.current
+    const awareness = awarenessRef.current
     if (!editor || !awareness) return
 
-    const publish = throttle(() => {
-      if (followTargetClientId != null) return // don't broadcast while following
-      if (isApplyingRemoteRef.current) return // ignore scroll caused by remote apply
-
+    const publish = () => {
       awareness.setLocalStateField('scroll', {
         top: editor.getScrollTop(),
         left: editor.getScrollLeft(),
         ts: Date.now(),
       } satisfies AwarenessScroll)
-    }, 50)
+    }
 
-    const disposable = editor.onDidScrollChange(() => publish())
-    publish() // publish once so others can snap immediately
-
+    const disposable = editor.onDidScrollChange(publish)
+    publish()
     return () => disposable.dispose()
-  }, [editor, awareness, followTargetClientId])
+  }, [editorReady, editorRef, awarenessRef])
 
-  // Apply target scroll when following
+  // ── Publish local editor cursor position ───────────────────────────
   useEffect(() => {
+    if (!editorReady) return
+    const editor = editorRef.current
+    const awareness = awarenessRef.current
     if (!editor || !awareness) return
+
+    const publish = (
+      overridePos?: monaco.Position | monaco.IPosition | null,
+    ) => {
+      const pos =
+        overridePos ??
+        editor.getPosition() ??
+        editor.getSelection()?.getStartPosition() ??
+        { lineNumber: 1, column: 1 }
+      awareness.setLocalStateField('editorCursor', {
+        lineNumber: pos.lineNumber,
+        column: pos.column,
+        ts: Date.now(),
+      } satisfies AwarenessEditorCursor)
+    }
+
+    // Use the event's position directly — avoids the one-step-behind stale read
+    // from editor.getPosition(). Do NOT listen to onDidChangeCursorSelection:
+    // that fires *inside* y-monaco's deltaDecorations call and causes a
+    // "Invoking deltaDecorations recursively" crash.
+    const posDisposable = editor.onDidChangeCursorPosition((event) => {
+      publish(event.position)
+    })
+    publish() // publish once immediately
+    return () => posDisposable.dispose()
+  }, [editorReady, editorRef, awarenessRef])
+
+  // ── Snap to target's cursor when following ─────────────────────────
+  useEffect(() => {
+    if (!editorReady) return
     if (followTargetClientId == null) return
 
-    const applyFromTarget = () => {
+    const editor = editorRef.current
+    const awareness = awarenessRef.current
+    const ydoc = ydocRef.current
+    if (!editor || !awareness) return
+
+    const snapToTarget = () => {
       const st = awareness.getStates().get(followTargetClientId) as
-        | AwarenessState
+        | (AwarenessState & { selection?: { head?: unknown } })
         | undefined
 
-      // target disappeared
       if (!st) {
         onTargetGone?.()
         return
       }
 
-      const scroll = st.scroll
-      if (!scroll) return
+      let line: number | null = null
+      let col: number | null = null
 
-      // ignore old updates
-      if (scroll.ts <= lastAppliedRemoteTsRef.current) return
+      // Primary: use editorCursor published by the driver
+      const cur = st.editorCursor
+      if (cur) {
+        line = cur.lineNumber
+        col = cur.column
+      }
 
-      const currTop = editor.getScrollTop()
-      const currLeft = editor.getScrollLeft()
+      // Fallback: derive from y-monaco selection awareness state
+      if (line == null && ydoc && st.selection?.head) {
+        const ytext = ydoc.getText(YJS_KEYS.MONACO_TEXT)
+        const headAbs = Y.createAbsolutePositionFromRelativePosition(
+          st.selection.head as Y.RelativePosition,
+          ydoc,
+        )
+        if (headAbs && headAbs.type === ytext) {
+          const model = editor.getModel()
+          if (model) {
+            const pos = model.getPositionAt(headAbs.index)
+            line = pos.lineNumber
+            col = pos.column
+          }
+        }
+      }
 
-      // avoid tiny jitter
-      const topDelta = Math.abs(currTop - scroll.top)
-      const leftDelta = Math.abs(currLeft - scroll.left)
-      if (topDelta < 2 && leftDelta < 2) return
+      if (line == null || col == null) return
 
-      lastAppliedRemoteTsRef.current = scroll.ts
+      // Skip if we already revealed this exact position
+      if (
+        line === lastAppliedLineRef.current &&
+        col === lastAppliedColumnRef.current
+      ) {
+        return
+      }
+      lastAppliedLineRef.current = line
+      lastAppliedColumnRef.current = col
 
-      requestAnimationFrame(() => {
-        isApplyingRemoteRef.current = true
-        editor.setScrollTop(scroll.top)
-        editor.setScrollLeft(scroll.left)
-        setTimeout(() => {
-          isApplyingRemoteRef.current = false
-        }, 0)
+      console.log('Snapping to target:', {
+        followTargetClientId,
+        targetState: st,
+        line,
+        col,
       })
+
+      editor.revealPositionInCenter({ lineNumber: line, column: col }, 1)
     }
 
-    // apply immediately when starting to follow
-    applyFromTarget()
+    // Snap immediately
+    snapToTarget()
 
+    // Poll every 100ms so we always catch position changes
+    const pollId = window.setInterval(snapToTarget, 100)
+
+    // Also react to awareness change events
     const handler = ({
       removed,
     }: {
@@ -121,10 +187,20 @@ export function useMonacoFollowScroll(params: {
         onTargetGone?.()
         return
       }
-      applyFromTarget()
+      snapToTarget()
     }
-
     awareness.on('change', handler)
-    return () => awareness.off('change', handler)
-  }, [editor, awareness, followTargetClientId, onTargetGone])
+
+    return () => {
+      window.clearInterval(pollId)
+      awareness.off('change', handler)
+    }
+  }, [
+    editorReady,
+    editorRef,
+    awarenessRef,
+    ydocRef,
+    followTargetClientId,
+    onTargetGone,
+  ])
 }
