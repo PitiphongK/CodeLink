@@ -299,9 +299,12 @@ export default function EditorClient({ roomId }: EditorClientProps) {
     window.addEventListener('mousemove', handleMouseMove)
 
     const updateUsers = () => {
-      const states = Array.from(
+      // Filter out entries with no user.name – these are transient states that
+      // arrive before the remote client has broadcast their identity, which
+      // would otherwise render as "User {clientId}" in the sidebar.
+      const states = (Array.from(
         provider.awareness.getStates().entries()
-      ) as AwarenessEntry[]
+      ) as AwarenessEntry[]).filter(([, state]) => state.user?.name != null)
 
       // Only update if the client IDs have changed to prevent infinite loops
       setUserStates((prev) => {
