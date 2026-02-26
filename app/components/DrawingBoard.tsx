@@ -10,7 +10,7 @@ import {
   Slider,
   Tooltip,
 } from '@heroui/react'
-import { Eraser, Minus, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Download, Eraser, Minus, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import { nanoid } from 'nanoid'
 import { getStroke } from 'perfect-freehand'
@@ -49,6 +49,8 @@ type DrawingToolbarProps = {
   brushSize: number
   onBrushSizeChange: (size: number) => void
   onClear: () => void
+  onExportPng: () => void
+  onExportJpg: () => void
 }
 
 const ToolbarControls = ({
@@ -59,6 +61,8 @@ const ToolbarControls = ({
   brushSize,
   onBrushSizeChange,
   onClear,
+  onExportPng,
+  onExportJpg,
 }: DrawingToolbarProps) => {
   return (
     <div
@@ -130,6 +134,33 @@ const ToolbarControls = ({
             aria-label="Clear all drawings"
           >
             <Trash2 size={16} />
+          </Button>
+        </Tooltip>
+      </div>
+
+      <div className="border-t border-border-subtle pt-3 flex gap-2 justify-center">
+        <Tooltip content="Export as PNG">
+          <Button
+            size="sm"
+            variant="flat"
+            onPress={onExportPng}
+            aria-label="Export as PNG"
+            className="text-xs px-2"
+          >
+            <Download size={14} />
+            PNG
+          </Button>
+        </Tooltip>
+        <Tooltip content="Export as JPG">
+          <Button
+            size="sm"
+            variant="flat"
+            onPress={onExportJpg}
+            aria-label="Export as JPG"
+            className="text-xs px-2"
+          >
+            <Download size={14} />
+            JPG
           </Button>
         </Tooltip>
       </div>
@@ -391,6 +422,40 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
     finishStroke()
   }, [ydoc, finishStroke, strokesArrayName])
 
+  const handleExport = useCallback((format: 'png' | 'jpg') => {
+    const svg = svgRef.current
+    if (!svg) return
+
+    const { width, height } = svg.getBoundingClientRect()
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      if (format === 'jpg') {
+        ctx.fillStyle = backgroundColor ?? '#ffffff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+
+      const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png'
+      const dataUrl = canvas.toDataURL(mimeType, 0.95)
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = `drawing.${format}`
+      a.click()
+    }
+    img.src = url
+  }, [backgroundColor])
+
   const STROKE_OPTIONS = {
     size: brushSize,
     thinning: 0.5,
@@ -414,6 +479,8 @@ function DrawingBoard({ ydoc, tool, onToolChange, backgroundColor, className, st
         brushSize={brushSize}
         onBrushSizeChange={setBrushSize}
         onClear={handleClear}
+        onExportPng={() => handleExport('png')}
+        onExportJpg={() => handleExport('jpg')}
       />
       <svg
         ref={svgRef}

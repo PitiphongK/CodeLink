@@ -27,7 +27,7 @@ import {
   LanguageSelector,
   LiveCursors,
   TerminalPanel,
-} from '@/app/components/editor'
+} from '@/app/components/editor/index'
 import { type SharedTerminalHandle } from '@/app/components/SharedTerminal'
 import Toolbar from '@/app/components/Toolbar'
 import {
@@ -61,7 +61,7 @@ import {
   isNumberArray,
   parseAnalyticsEntry,
 } from '@/app/utils/editor'
-import { Crown, LogOut, MoreHorizontal, Pen, PenOff, Settings, Users, X } from 'lucide-react'
+import { BarChart2, Crown, LogOut, MoreHorizontal, Pen, PenOff, Settings, Users, X } from 'lucide-react'
 import { getLanguageIcon } from '@/app/components/editor/get-language-icon'
 
 const LANGUAGE_VALUES = new Set(Object.values(Languages))
@@ -465,6 +465,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         setMyRole(fromMap)
         // Apply immediately — don't rely on the React render cycle
         editorRef.current?.updateOptions({ readOnly: fromMap === 'navigator' })
+        // Notify the user their role has changed
+        addToast({
+          title: fromMap === 'driver' ? 'You are now the Driver' : 'You are now the Navigator',
+          description: fromMap === 'driver'
+            ? 'You have edit access to the code.'
+            : 'You are in read-only mode.',
+          color: fromMap === 'driver' ? 'success' : 'primary',
+          timeout: 4000,
+        })
       }
     }
     rolesMap.observe(rolesObserver)
@@ -1027,15 +1036,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         onRolesClose={() => setRolesOpen(false)}
         isOwner={isOwner}
         userStates={userStates}
-        getRole={(clientId) =>
+        getRole={(clientId: number) =>
           rolesMapRef.current?.get(clientId.toString()) ?? 'navigator'
         }
-        onSetRole={(clientId, role) => {
+        onSetRole={(clientId: number, role: AwarenessRole) => {
           if (!isOwner) return
           rolesMapRef.current?.set(clientId.toString(), role)
         }}
         currentOwnerId={ownerId}
-        onTransferOwner={(targetId) => {
+        onTransferOwner={(targetId: number) => {
           if (!isOwner) return
           roomMapRef.current?.set(ROOM_MAP_KEYS.OWNER, targetId)
         }}
@@ -1174,8 +1183,8 @@ export default function EditorClient({ roomId }: EditorClientProps) {
                             size="sm"
                             variant="flat"
                             className={`h-auto min-w-0 px-1.5 py-0.5 text-[10px] font-medium rounded shrink-0 ${isFollowing
-                                ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
-                                : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
+                              ? 'bg-blue-500/15 text-blue-400 hover:bg-red-500/10 hover:text-red-400'
+                              : 'bg-surface-elevated text-text-secondary hover:bg-blue-500/15 hover:text-blue-400'
                               }`}
                             onPress={() => {
                               if (isFollowing) {
@@ -1197,8 +1206,21 @@ export default function EditorClient({ roomId }: EditorClientProps) {
             )}
           </div>
 
-          {/* Bottom: Settings + End/Leave */}
+          {/* Bottom: Analytics + Settings + End/Leave */}
           <div className="flex flex-col gap-1 p-2 pb-4">
+            <Tooltip content={sidebarExpanded ? undefined : 'Analytics'} placement="right" isDisabled={sidebarExpanded}>
+              <Button
+                isIconOnly={!sidebarExpanded}
+                size="sm"
+                className={`bg-transparent hover:bg-surface-elevated text-text-secondary w-full ${sidebarExpanded ? 'justify-start gap-2 px-2' : ''
+                  }`}
+                onPress={handleOpenAnalytics}
+                aria-label="Analytics"
+              >
+                <BarChart2 size={16} className="shrink-0" />
+                {sidebarExpanded && <span className="text-sm font-medium text-text-primary">Analytics</span>}
+              </Button>
+            </Tooltip>
             <Tooltip content={sidebarExpanded ? undefined : 'Settings'} placement="right" isDisabled={sidebarExpanded}>
               <Button
                 isIconOnly={!sidebarExpanded}

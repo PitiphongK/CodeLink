@@ -149,7 +149,7 @@ export default function Toolbar({
                   }
                 }}
               >
-                <span className="text-sm">Export</span>
+                <span className="text-sm">Export File</span>
               </Button>
             </div>
 
@@ -328,7 +328,7 @@ export default function Toolbar({
             </Button>
           </div>
 
-          {/* Right: Follow, Invite, Analytics (desktop only) */}
+          {/* Right: Follow, Invite (desktop only) */}
           <div className="ml-auto hidden md:flex items-center gap-2">
             {canToggleFollow && followEnabled ? (
               <Chip size="sm" variant="flat" color="primary" className="hidden lg:inline-flex">
@@ -356,17 +356,6 @@ export default function Toolbar({
                 aria-label="Invite & Roles"
               >
                 <Share2 size={16} />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Analytics">
-              <Button
-                isIconOnly
-                className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
-                size="sm"
-                onPress={onOpenAnalytics}
-                aria-label="Analytics"
-              >
-                <BarChart2 size={16} />
               </Button>
             </Tooltip>
           </div>

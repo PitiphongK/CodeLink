@@ -15,7 +15,6 @@ type Summary = {
   sessionMs: number
   driverMs: number
   navigatorMs: number
-  noneMs: number
 }
 
 type UserRoleContribution = {
@@ -23,7 +22,6 @@ type UserRoleContribution = {
   name: string
   driverMs: number
   navigatorMs: number
-  noneMs: number
 }
 
 type Props = {
@@ -48,18 +46,16 @@ function formatDuration(ms: number) {
 function RolePie({
   driverMs,
   navigatorMs,
-  noneMs,
   size = 44,
   stroke = 8,
 }: {
   driverMs: number
   navigatorMs: number
-  noneMs: number
   size?: number
   stroke?: number
 }) {
   const total =
-    Math.max(0, driverMs) + Math.max(0, navigatorMs) + Math.max(0, noneMs)
+    Math.max(0, driverMs) + Math.max(0, navigatorMs)
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
 
@@ -74,7 +70,6 @@ function RolePie({
       value: Math.max(0, navigatorMs),
       className: 'stroke-orange-500',
     },
-    { key: 'none', value: Math.max(0, noneMs), className: 'stroke-gray-500' },
   ] as const
 
   let offset = 0
@@ -97,24 +92,24 @@ function RolePie({
         />
         {total > 0
           ? segments.map((s) => {
-              const dash = (s.value / total) * c
-              const el = (
-                <circle
-                  key={s.key}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={r}
-                  fill="transparent"
-                  className={s.className}
-                  strokeWidth={stroke}
-                  strokeDasharray={`${dash} ${c}`}
-                  strokeDashoffset={-offset}
-                  strokeLinecap="butt"
-                />
-              )
-              offset += dash
-              return el
-            })
+            const dash = (s.value / total) * c
+            const el = (
+              <circle
+                key={s.key}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="transparent"
+                className={s.className}
+                strokeWidth={stroke}
+                strokeDasharray={`${dash} ${c}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+              />
+            )
+            offset += dash
+            return el
+          })
           : null}
       </g>
     </svg>
@@ -133,7 +128,6 @@ export default function SessionSummaryModal({
     return [
       { label: 'Driver', value: summary.driverMs },
       { label: 'Navigator', value: summary.navigatorMs },
-      { label: 'None', value: summary.noneMs },
     ]
   }, [summary])
 
@@ -189,10 +183,6 @@ export default function SessionSummaryModal({
                           <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
                           Navigator
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="inline-block h-2 w-2 rounded-full bg-gray-500" />
-                          None
-                        </div>
                       </div>
                       <div className="flex flex-col gap-3">
                         {users.map((u) => (
@@ -206,14 +196,12 @@ export default function SessionSummaryModal({
                               </div>
                               <div className="text-xs text-gray-500">
                                 {formatDuration(u.driverMs)} driver •{' '}
-                                {formatDuration(u.navigatorMs)} nav •{' '}
-                                {formatDuration(u.noneMs)} none
+                                {formatDuration(u.navigatorMs)} nav
                               </div>
                             </div>
                             <RolePie
                               driverMs={u.driverMs}
                               navigatorMs={u.navigatorMs}
-                              noneMs={u.noneMs}
                             />
                           </div>
                         ))}
