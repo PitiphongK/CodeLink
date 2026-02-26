@@ -277,6 +277,16 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       ydoc
     )
 
+    // Set user presence immediately so the very first awareness broadcast
+    // already carries the user's name. Moving this before the awareness
+    // listener subscription prevents the brief window where this client
+    // appears as "User {clientId}" in all connected participants' sidebars.
+    const userName = sessionStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Anonymous'
+    provider.awareness.setLocalStateField('user', {
+      name: userName,
+      color: generateRandomColor(),
+    })
+
     const handleMouseMove = (event: MouseEvent) => {
       // Normalize cursor position to 0-1 range for cross-screen compatibility
       const normalizedX = window.innerWidth > 0 ? event.clientX / window.innerWidth : 0
@@ -483,13 +493,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       }
     }
     rolesMap.observe(rolesObserver)
-
-    // set presence
-    const userName = sessionStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Anonymous'
-    provider.awareness.setLocalStateField('user', {
-      name: userName,
-      color: generateRandomColor(),
-    })
 
     ydocRef.current = ydoc
     providerRef.current = provider
