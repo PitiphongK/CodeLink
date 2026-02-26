@@ -870,9 +870,7 @@ export default function EditorClient({ roomId }: EditorClientProps) {
       () => {
         addToast({
           title: 'Invite link copied',
-          description: 'Share it with your teammate to join.',
           color: 'success',
-          variant: 'solid',
           timeout: 3000,
         })
       },
@@ -882,7 +880,6 @@ export default function EditorClient({ roomId }: EditorClientProps) {
           title: 'Copy failed',
           description: 'Could not copy invite link to clipboard.',
           color: 'danger',
-          variant: 'solid',
           timeout: 4000,
         })
       }

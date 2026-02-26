@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 
 import {
+  addToast,
   Button,
-  Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -18,7 +18,6 @@ import {
   Play,
   Settings,
   X,
-  FileCode2,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -52,6 +51,7 @@ export default function Toolbar({
   running,
   onImport,
   onExport,
+  onInvite,
   onManageRoles,
   onOpenSettings,
   onOpenAnalytics,
@@ -61,7 +61,6 @@ export default function Toolbar({
   myRole,
   followEnabled = true,
   onToggleFollow,
-  followingName,
   onGitHubImport,
 }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
@@ -328,32 +327,15 @@ export default function Toolbar({
             </Button>
           </div>
 
-          {/* Right: Follow, Invite (desktop only) */}
+          {/* Right: Invite (desktop only) */}
           <div className="ml-auto hidden md:flex items-center gap-2">
-            {canToggleFollow && followEnabled ? (
-              <Chip size="sm" variant="flat" color="primary" className="hidden lg:inline-flex">
-                Following {followingName ?? 'driver'}
-              </Chip>
-            ) : null}
-            <Tooltip content={followEnabled ? `Unfollow ${followingName ?? 'driver'}` : `Follow ${followingName ?? 'driver'}`}>
-              <Button
-                isIconOnly
-                className={`bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border transition-colors ${followEnabled && canToggleFollow ? 'bg-blue-accent text-white' : ''}`}
-                size="sm"
-                onPress={onToggleFollow}
-                aria-label={followEnabled ? 'Unfollow driver' : 'Follow driver'}
-                isDisabled={!canToggleFollow}
-              >
-                <Navigation size={16} />
-              </Button>
-            </Tooltip>
-            <Tooltip content="Invite & Roles">
+            <Tooltip content="Invite">
               <Button
                 isIconOnly
                 className="bg-surface-secondary hover:bg-surface-elevated text-text-primary border border-btn-border"
                 size="sm"
-                onPress={onManageRoles}
-                aria-label="Invite & Roles"
+                onPress={onInvite}
+                aria-label="Invite"
               >
                 <Share2 size={16} />
               </Button>
