@@ -465,6 +465,15 @@ export default function EditorClient({ roomId }: EditorClientProps) {
         setMyRole(fromMap)
         // Apply immediately — don't rely on the React render cycle
         editorRef.current?.updateOptions({ readOnly: fromMap === 'navigator' })
+        // Notify the user their role has changed
+        addToast({
+          title: fromMap === 'driver' ? 'You are now the Driver' : 'You are now the Navigator',
+          description: fromMap === 'driver'
+            ? 'You have edit access to the code.'
+            : 'You are in read-only mode.',
+          color: fromMap === 'driver' ? 'success' : 'primary',
+          timeout: 4000,
+        })
       }
     }
     rolesMap.observe(rolesObserver)
